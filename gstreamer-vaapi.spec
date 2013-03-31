@@ -1,14 +1,17 @@
-# NOTE: this version is in the half way between gstreamer 0.10 and 1.0
-# (uses some post-0.10 APIs, but didn't switch to 1.0 API/ABI tags)
+# NOTE: transition to gstreamer 1.0 is not ready
+#
+# Conditional build:
+%bcond_without	static_libs	# static libraries
+#
 Summary:	GStreamer plugin to support Video Acceleration API
 Summary(pl.UTF-8):	Wtyczka GStreamera obsługująca Video Acceleration API
 Name:		gstreamer-vaapi
-Version:	0.5.1
+Version:	0.5.2
 Release:	0.1
 License:	LGPL v2.1+
 Group:		Libraries
 Source0:	http://www.freedesktop.org/software/vaapi/releases/gstreamer-vaapi/%{name}-%{version}.tar.bz2
-# Source0-md5:	0ac83a03d903943bd09bdc39eb5eb203
+# Source0-md5:	849825cad1def77ab5199a2b9b1b7bdb
 URL:		http://www.freedesktop.org/wiki/Software/vaapi/
 BuildRequires:	Mesa-libGL-devel
 BuildRequires:	autoconf >= 2.58
@@ -69,6 +72,18 @@ Header files for GStreamer VA-API helper libraries.
 %description devel -l pl.UTF-8
 Pliki nagłówkowe bibliotek pomocniczych VA-API GStreamera.
 
+%package static
+Summary:	Static GStreamer VA-API libraries
+Summary(pl.UTF-8):	Statyczne biblioteki VA-API GStreamera
+Group:		Development/Libraries
+Requires:	%{name}-devel = %{version}-%{release}
+
+%description static
+Static GStreamer VA-API libraries.
+
+%description static -l pl.UTF-8
+Statyczne biblioteki VA-API GStreamera.
+
 %prep
 %setup -q
 
@@ -79,7 +94,8 @@ Pliki nagłówkowe bibliotek pomocniczych VA-API GStreamera.
 %{__autoheader}
 %{__automake}
 %configure \
-	--disable-silent-rules
+	--disable-silent-rules \
+	%{!?with_static_libs:--disable-static}
 
 %{__make}
 
@@ -91,6 +107,8 @@ rm -rf $RPM_BUILD_ROOT
 
 # gstreamer module
 %{__rm} $RPM_BUILD_ROOT%{_libdir}/gstreamer-0.10/libgst*.la
+# obsoleted by pkg-config
+%{__rm} $RPM_BUILD_ROOT%{_libdir}/lib*.la
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -102,15 +120,15 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(644,root,root,755)
 %doc AUTHORS NEWS README
 %attr(755,root,root) %{_libdir}/libgstvaapi-0.10.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-0.10.so.0
+%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-0.10.so.1
 %attr(755,root,root) %{_libdir}/libgstvaapi-drm-0.10.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-drm-0.10.so.0
+%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-drm-0.10.so.1
 %attr(755,root,root) %{_libdir}/libgstvaapi-glx-0.10.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-glx-0.10.so.0
+%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-glx-0.10.so.1
 %attr(755,root,root) %{_libdir}/libgstvaapi-wayland-0.10.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-wayland-0.10.so.0
+%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-wayland-0.10.so.1
 %attr(755,root,root) %{_libdir}/libgstvaapi-x11-0.10.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-x11-0.10.so.0
+%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-x11-0.10.so.1
 %attr(755,root,root) %{_libdir}/gstreamer-0.10/libgstvaapi.so
 
 %files devel
@@ -126,3 +144,13 @@ rm -rf $RPM_BUILD_ROOT
 %{_pkgconfigdir}/gstreamer-vaapi-glx-0.10.pc
 %{_pkgconfigdir}/gstreamer-vaapi-wayland-0.10.pc
 %{_pkgconfigdir}/gstreamer-vaapi-x11-0.10.pc
+
+%if %{with static_libs}
+%files static
+%defattr(644,root,root,755)
+%{_libdir}/libgstvaapi-0.10.a
+%{_libdir}/libgstvaapi-drm-0.10.a
+%{_libdir}/libgstvaapi-glx-0.10.a
+%{_libdir}/libgstvaapi-wayland-0.10.a
+%{_libdir}/libgstvaapi-x11-0.10.a
+%endif
