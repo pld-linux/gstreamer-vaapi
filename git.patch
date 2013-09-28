@@ -1,0 +1,2163 @@
+diff --git a/configure.ac b/configure.ac
+index ac37510..f9029e3 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1,8 +1,8 @@
+ # gstreamer-vaapi package version number
+ m4_define([gst_vaapi_major_version], [0])
+ m4_define([gst_vaapi_minor_version], [5])
+-m4_define([gst_vaapi_micro_version], [6])
+-m4_define([gst_vaapi_pre_version],   [0])
++m4_define([gst_vaapi_micro_version], [7])
++m4_define([gst_vaapi_pre_version],   [1])
+ m4_define([gst_vaapi_version],
+           [gst_vaapi_major_version.gst_vaapi_minor_version.gst_vaapi_micro_version])
+ m4_if(gst_vaapi_pre_version, [0], [], [
+@@ -13,6 +13,7 @@ m4_append([gst_vaapi_version], gst_vaapi_pre_version, [.pre])
+ m4_define([gst_vaapi_lt_current],       [4])
+ m4_define([gst0_vaapi_lt_current_bias], [0])
+ m4_define([gst1_vaapi_lt_current_bias], [2])
++m4_define([gst2_vaapi_lt_current_bias], [4])
+ m4_define([gst_vaapi_lt_revision],      [0])
+ m4_define([gst_vaapi_lt_age],           [0])
+ 
+@@ -27,6 +28,9 @@ m4_define([gst0_plugins_bad_version],   [0.10.22])
+ m4_define([gst1_version],               [1.0.0])
+ m4_define([gst1_plugins_base_version],  [1.0.0])
+ m4_define([gst1_plugins_bad_version],   [1.0.0])
++m4_define([gst12_version],              [1.1.90])
++m4_define([gst12_plugins_base_version], [1.1.0])
++m4_define([gst12_plugins_bad_version],  [1.1.0])
+ 
+ # Wayland minimum version number
+ m4_define([wayland_api_version], [1.0.0])
+@@ -158,6 +162,11 @@ case $GST_API_VERSION in
+     GST_PLUGINS_BASE_VERSION_REQUIRED=gst1_plugins_base_version
+     GST_PLUGINS_BAD_VERSION_REQUIRED=gst1_plugins_bad_version
+     ;;
++1.2)
++    GST_VERSION_REQUIRED=gst12_version
++    GST_PLUGINS_BASE_VERSION_REQUIRED=gst12_plugins_base_version
++    GST_PLUGINS_BAD_VERSION_REQUIRED=gst12_plugins_bad_version
++    ;;
+ *)
+     AC_MSG_ERROR([unsupported GStreamer API version $GST_API_VERSION])
+     ;;
+@@ -169,18 +178,29 @@ AC_SUBST(GST_PLUGINS_BAD_VERSION_REQUIRED)
+ 
+ USE_GST_API_0_10="no"
+ USE_GST_API_1_0p="no"
++USE_GST_API_1_2p="no"
+ AS_VERSION_COMPARE([$GST_API_VERSION], [0.10],
+     [], [USE_GST_API_0_10="yes"], [])
+ AS_VERSION_COMPARE([$GST_API_VERSION], [1.0],
+     [], [USE_GST_API_1_0p="yes"], [USE_GST_API_1_0p="yes"])
++AS_VERSION_COMPARE([$GST_API_VERSION], [1.2],
++    [], [USE_GST_API_1_2p="yes"], [USE_GST_API_1_2p="yes"])
+ AM_CONDITIONAL([USE_GST_API_0_10], [test "$USE_GST_API_0_10" = "yes"])
+ AM_CONDITIONAL([USE_GST_API_1_0p], [test "$USE_GST_API_1_0p" = "yes"])
++AM_CONDITIONAL([USE_GST_API_1_2p], [test "$USE_GST_API_1_2p" = "yes"])
++
++dnl GStreamer 1.2.x APIs don't have their own namespace
++GST_PKG_VERSION="$GST_API_VERSION"
++if test "$USE_GST_API_1_2p" = "yes"; then
++    GST_PKG_VERSION="1.0"
++fi
++AC_SUBST([GST_PKG_VERSION])
+ 
+ dnl GStreamer Core
+ PKG_CHECK_MODULES([GST],
+-    [gstreamer-$GST_API_VERSION >= $GST_VERSION_REQUIRED])
++    [gstreamer-$GST_PKG_VERSION >= $GST_VERSION_REQUIRED])
+ PKG_CHECK_MODULES([GST_BASE],
+-    [gstreamer-base-$GST_API_VERSION >= $GST_VERSION_REQUIRED])
++    [gstreamer-base-$GST_PKG_VERSION >= $GST_VERSION_REQUIRED])
+ 
+ AC_CACHE_CHECK([for GstBaseSink::query hook], ac_cv_have_gst_base_sink_query, [
+     saved_CPPFLAGS="$CPPFLAGS"
+@@ -203,15 +223,15 @@ fi
+ 
+ dnl GStreamer -base plugins
+ PKG_CHECK_MODULES([GST_PLUGINS_BASE],
+-    [gstreamer-plugins-base-$GST_API_VERSION >= $GST_PLUGINS_BASE_VERSION_REQUIRED])
++    [gstreamer-plugins-base-$GST_PKG_VERSION >= $GST_PLUGINS_BASE_VERSION_REQUIRED])
+ if test "$GST_API_VERSION" = "0.10"; then
+ PKG_CHECK_MODULES([GST_INTERFACES],
+-    [gstreamer-interfaces-$GST_API_VERSION >= $GST_PLUGINS_BASE_VERSION_REQUIRED])
++    [gstreamer-interfaces-$GST_PKG_VERSION >= $GST_PLUGINS_BASE_VERSION_REQUIRED])
+ fi
+ 
+ dnl ... GstVideoOverlayComposition (gstreamer-video)
+ PKG_CHECK_MODULES([GST_VIDEO],
+-    [gstreamer-video-$GST_API_VERSION >= $GST_PLUGINS_BASE_VERSION_REQUIRED])
++    [gstreamer-video-$GST_PKG_VERSION >= $GST_PLUGINS_BASE_VERSION_REQUIRED])
+ 
+ AC_CACHE_CHECK([for GstVideoOverlayComposition],
+     ac_cv_have_gst_video_overlay_composition, [
+@@ -288,9 +308,11 @@ AC_CACHE_CHECK([for GstVideoDecoder],
+ AM_CONDITIONAL([USE_LOCAL_GST_VIDEO_DECODER],
+     [test "$ac_cv_have_gst_video_decoder" != "yes"])
+ 
+-dnl GStreamer -bad plugins
++dnl GStreamer -bad plugins (deprecated in GStreamer v1.2)
++if test "$USE_GST_API_1_2p" != "yes"; then
+ PKG_CHECK_MODULES([GST_BASEVIDEO],
+-    [gstreamer-basevideo-$GST_API_VERSION >= $GST_PLUGINS_BAD_VERSION_REQUIRED])
++    [gstreamer-basevideo-$GST_PKG_VERSION >= $GST_PLUGINS_BAD_VERSION_REQUIRED])
++fi
+ 
+ dnl ... bitstream parsers
+ if test "$enable_builtin_codecparsers" = "yes"; then
+@@ -299,7 +321,7 @@ if test "$enable_builtin_codecparsers" = "yes"; then
+     ac_cv_have_gst_jpeg_parser="no"
+ else
+ PKG_CHECK_MODULES([GST_CODEC_PARSERS],
+-    [gstreamer-codecparsers-$GST_API_VERSION >= $GST_PLUGINS_BAD_VERSION_REQUIRED])
++    [gstreamer-codecparsers-$GST_PKG_VERSION >= $GST_PLUGINS_BAD_VERSION_REQUIRED])
+ fi
+ 
+ dnl ... MPEG-2 parser, with the required extensions
+@@ -378,6 +400,7 @@ AM_CONDITIONAL([USE_LOCAL_CODEC_PARSERS_JPEG],
+ case $GST_API_VERSION in
+ 0.10)   lt_bias=gst0_vaapi_lt_current_bias;;
+ 1.0)    lt_bias=gst1_vaapi_lt_current_bias;;
++1.2)    lt_bias=gst2_vaapi_lt_current_bias;;
+ esac
+ GST_VAAPI_MAJOR_VERSION=`expr gst_vaapi_lt_current - "$lt_bias"`
+ AC_SUBST(GST_VAAPI_MAJOR_VERSION)
+@@ -410,13 +433,14 @@ AC_MSG_CHECKING([for GStreamer plugins directory])
+ case $GST_API_VERSION in
+ 0.10)   _gst_plugin_path="$GST_PLUGIN_PATH";;
+ 1.0)    _gst_plugin_path="$GST_PLUGIN_PATH_1_0";;
++1.2)    _gst_plugin_path="$GST_PLUGIN_PATH_1_0";;
+ esac
+ if test -d "$_gst_plugin_path"; then
+     GST_PLUGINS_DIR="$_gst_plugin_path"
+ else
+-    GST_PLUGINS_DIR=`$PKG_CONFIG gstreamer-$GST_API_VERSION --variable pluginsdir`
++    GST_PLUGINS_DIR=`$PKG_CONFIG gstreamer-$GST_PKG_VERSION --variable pluginsdir`
+     if test -z "$GST_PLUGINS_DIR"; then
+-        GST_PLUGINS_DIR="\$(libdir)/gstreamer-$GST_API_VERSION"
++        GST_PLUGINS_DIR="\$(libdir)/gstreamer-$GST_PKG_VERSION"
+     fi
+ fi
+ AC_MSG_RESULT([$GST_PLUGINS_DIR])
+diff --git a/debian.upstream/control.in b/debian.upstream/control.in
+index 2ee6225..9897e9d 100644
+--- a/debian.upstream/control.in
++++ b/debian.upstream/control.in
+@@ -5,9 +5,9 @@ Maintainer: Gwenole Beauchesne <gwenole.beauchesne@intel.com>
+ Build-Depends: debhelper (>= 5),
+ 	       cdbs,
+ 	       libglib2.0-dev (>= @GLIB_VERSION_REQUIRED@),
+-	       libgstreamer@GST_API_VERSION@-dev (>= @GST_VERSION_REQUIRED@),
+-	       libgstreamer-plugins-base@GST_API_VERSION@-dev (>= @GST_PLUGINS_BASE_VERSION_REQUIRED@),
+-	       libgstreamer-plugins-bad@GST_API_VERSION@-dev (>= @GST_PLUGINS_BAD_VERSION_REQUIRED@),
++	       libgstreamer@GST_PKG_VERSION@-dev (>= @GST_VERSION_REQUIRED@),
++	       libgstreamer-plugins-base@GST_PKG_VERSION@-dev (>= @GST_PLUGINS_BASE_VERSION_REQUIRED@),
++	       libgstreamer-plugins-bad@GST_PKG_VERSION@-dev (>= @GST_PLUGINS_BAD_VERSION_REQUIRED@),
+ @USE_DRM_TRUE@	       libdrm-dev, libudev-dev,
+ @USE_X11_TRUE@	       libx11-dev, libxrandr-dev,
+ @USE_GLX_TRUE@	       libgl-dev,
+diff --git a/gst-libs/gst/vaapi/gstvaapidecoder.c b/gst-libs/gst/vaapi/gstvaapidecoder.c
+index 7870291..76a46ff 100644
+--- a/gst-libs/gst/vaapi/gstvaapidecoder.c
++++ b/gst-libs/gst/vaapi/gstvaapidecoder.c
+@@ -85,6 +85,7 @@ parser_state_prepare(GstVaapiParserState *ps, GstAdapter *adapter)
+ 
+ reset:
+     ps->current_adapter = adapter;
++    ps->input_offset1 = -1;
+     ps->input_offset2 = -1;
+ }
+ 
+diff --git a/gst-libs/gst/vaapi/gstvaapidecoder_jpeg.c b/gst-libs/gst/vaapi/gstvaapidecoder_jpeg.c
+index 9e62778..c3655f0 100644
+--- a/gst-libs/gst/vaapi/gstvaapidecoder_jpeg.c
++++ b/gst-libs/gst/vaapi/gstvaapidecoder_jpeg.c
+@@ -47,6 +47,19 @@
+ typedef struct _GstVaapiDecoderJpegPrivate      GstVaapiDecoderJpegPrivate;
+ typedef struct _GstVaapiDecoderJpegClass        GstVaapiDecoderJpegClass;
+ 
++typedef enum  {
++    GST_JPEG_VIDEO_STATE_GOT_SOI        = 1 << 0,
++    GST_JPEG_VIDEO_STATE_GOT_SOF        = 1 << 1,
++    GST_JPEG_VIDEO_STATE_GOT_SOS        = 1 << 2,
++    GST_JPEG_VIDEO_STATE_GOT_HUF_TABLE  = 1 << 3,
++    GST_JPEG_VIDEO_STATE_GOT_IQ_TABLE   = 1 << 4,
++
++    GST_JPEG_VIDEO_STATE_VALID_PICTURE = (
++        GST_JPEG_VIDEO_STATE_GOT_SOI |
++        GST_JPEG_VIDEO_STATE_GOT_SOF |
++        GST_JPEG_VIDEO_STATE_GOT_SOS),
++} GstJpegVideoState;
++
+ struct _GstVaapiDecoderJpegPrivate {
+     GstVaapiProfile             profile;
+     guint                       width;
+@@ -55,9 +68,9 @@ struct _GstVaapiDecoderJpegPrivate {
+     GstJpegFrameHdr             frame_hdr;
+     GstJpegHuffmanTables        huf_tables;
+     GstJpegQuantTables          quant_tables;
+-    gboolean                    has_huf_table;
+-    gboolean                    has_quant_table;
+     guint                       mcu_restart;
++    guint                       parser_state;
++    guint                       decoder_state;
+     guint                       is_opened       : 1;
+     guint                       profile_changed : 1;
+ };
+@@ -83,14 +96,17 @@ struct _GstVaapiDecoderJpegClass {
+     GstVaapiDecoderClass parent_class;
+ };
+ 
+-typedef struct _GstJpegScanSegment GstJpegScanSegment;
+-struct _GstJpegScanSegment {
+-    guint                       header_offset;
+-    guint                       header_size;
+-    guint                       data_offset;
+-    guint                       data_size;
+-    guint                       is_valid        : 1;
+-};
++static inline void
++unit_set_marker_code(GstVaapiDecoderUnit *unit, GstJpegMarkerCode marker)
++{
++    unit->parsed_info = GSIZE_TO_POINTER(marker);
++}
++
++static inline GstJpegMarkerCode
++unit_get_marker_code(GstVaapiDecoderUnit *unit)
++{
++    return GPOINTER_TO_SIZE(unit->parsed_info);
++}
+ 
+ static void
+ gst_vaapi_decoder_jpeg_close(GstVaapiDecoderJpeg *decoder)
+@@ -110,8 +126,12 @@ gst_vaapi_decoder_jpeg_close(GstVaapiDecoderJpeg *decoder)
+ static gboolean
+ gst_vaapi_decoder_jpeg_open(GstVaapiDecoderJpeg *decoder)
+ {
++    GstVaapiDecoderJpegPrivate * const priv = &decoder->priv;
++
+     gst_vaapi_decoder_jpeg_close(decoder);
+ 
++    priv->parser_state  = 0;
++    priv->decoder_state = 0;
+     return TRUE;
+ }
+ 
+@@ -182,70 +202,90 @@ ensure_context(GstVaapiDecoderJpeg *decoder)
+     return GST_VAAPI_DECODER_STATUS_SUCCESS;
+ }
+ 
+-static gboolean
++static inline gboolean
++is_valid_state(guint state, guint ref_state)
++{
++    return (state & ref_state) == ref_state;
++}
++
++#define VALID_STATE(TYPE, STATE)                \
++    is_valid_state(priv->G_PASTE(TYPE,_state),  \
++        G_PASTE(GST_JPEG_VIDEO_STATE_,STATE))
++
++static GstVaapiDecoderStatus
+ decode_current_picture(GstVaapiDecoderJpeg *decoder)
+ {
+     GstVaapiDecoderJpegPrivate * const priv = &decoder->priv;
+     GstVaapiPicture * const picture = priv->current_picture;
+-    gboolean success = TRUE;
+-
+-    if (picture) {
+-        if (!gst_vaapi_picture_decode(picture))
+-            success = FALSE;
+-        else if (!gst_vaapi_picture_output(picture))
+-            success = FALSE;
+-        gst_vaapi_picture_replace(&priv->current_picture, NULL);
+-    }
+-    return success;
++
++    if (!VALID_STATE(decoder, VALID_PICTURE))
++        goto drop_frame;
++    priv->decoder_state = 0;
++
++    if (!picture)
++        return GST_VAAPI_DECODER_STATUS_SUCCESS;
++
++    if (!gst_vaapi_picture_decode(picture))
++        goto error;
++    if (!gst_vaapi_picture_output(picture))
++        goto error;
++    gst_vaapi_picture_replace(&priv->current_picture, NULL);
++    return GST_VAAPI_DECODER_STATUS_SUCCESS;
++
++error:
++    gst_vaapi_picture_replace(&priv->current_picture, NULL);
++    return GST_VAAPI_DECODER_STATUS_ERROR_UNKNOWN;
++
++drop_frame:
++    priv->decoder_state = 0;
++    return GST_VAAPI_DECODER_STATUS_DROP_FRAME;
+ }
+ 
+ static gboolean
+ fill_picture(
+     GstVaapiDecoderJpeg *decoder, 
+     GstVaapiPicture     *picture,
+-    GstJpegFrameHdr     *jpeg_frame_hdr
++    GstJpegFrameHdr     *frame_hdr
+ )
+ {
+-    VAPictureParameterBufferJPEGBaseline *pic_param = picture->param;
++    VAPictureParameterBufferJPEGBaseline * const pic_param = picture->param;
+     guint i;
+ 
+-    g_assert(pic_param);
+-
+     memset(pic_param, 0, sizeof(VAPictureParameterBufferJPEGBaseline));
+-    pic_param->picture_width    = jpeg_frame_hdr->width;
+-    pic_param->picture_height   = jpeg_frame_hdr->height;
++    pic_param->picture_width    = frame_hdr->width;
++    pic_param->picture_height   = frame_hdr->height;
+ 
+-    pic_param->num_components   = jpeg_frame_hdr->num_components;
+-    if (jpeg_frame_hdr->num_components > 4)
++    pic_param->num_components   = frame_hdr->num_components;
++    if (frame_hdr->num_components > 4)
+         return FALSE;
+     for (i = 0; i < pic_param->num_components; i++) {
+         pic_param->components[i].component_id =
+-            jpeg_frame_hdr->components[i].identifier;
++            frame_hdr->components[i].identifier;
+         pic_param->components[i].h_sampling_factor =
+-            jpeg_frame_hdr->components[i].horizontal_factor;
++            frame_hdr->components[i].horizontal_factor;
+         pic_param->components[i].v_sampling_factor =
+-            jpeg_frame_hdr->components[i].vertical_factor;
++            frame_hdr->components[i].vertical_factor;
+         pic_param->components[i].quantiser_table_selector =
+-            jpeg_frame_hdr->components[i].quant_table_selector;
++            frame_hdr->components[i].quant_table_selector;
+     }
+     return TRUE;
+ }
+ 
+-static gboolean
+-fill_quantization_table(
+-    GstVaapiDecoderJpeg *decoder, 
+-    GstVaapiPicture     *picture
+-)
++static GstVaapiDecoderStatus
++fill_quantization_table(GstVaapiDecoderJpeg *decoder, GstVaapiPicture *picture)
+ {
+     GstVaapiDecoderJpegPrivate * const priv = &decoder->priv;
+     VAIQMatrixBufferJPEGBaseline *iq_matrix;
+     guint i, j, num_tables;
+ 
+-    if (!priv->has_quant_table)
++    if (!VALID_STATE(decoder, GOT_IQ_TABLE))
+         gst_jpeg_get_default_quantization_tables(&priv->quant_tables);
+     
+     picture->iq_matrix = GST_VAAPI_IQ_MATRIX_NEW(JPEGBaseline, decoder);
+-    g_assert(picture->iq_matrix);
++    if (!picture->iq_matrix) {
++        GST_ERROR("failed to allocate quantiser table");
++        return GST_VAAPI_DECODER_STATUS_ERROR_ALLOCATION_FAILED;
++    }
+     iq_matrix = picture->iq_matrix->param;
+ 
+     num_tables = MIN(G_N_ELEMENTS(iq_matrix->quantiser_table),
+@@ -259,32 +299,51 @@ fill_quantization_table(
+         if (!iq_matrix->load_quantiser_table[i])
+             continue;
+ 
+-        g_assert(quant_table->quant_precision == 0);
++        if (quant_table->quant_precision != 0) {
++            // Only Baseline profile is supported, thus 8-bit Qk values
++            GST_ERROR("unsupported quantization table element precision");
++            return GST_VAAPI_DECODER_STATUS_ERROR_UNSUPPORTED_CHROMA_FORMAT;
++        }
++
+         for (j = 0; j < GST_JPEG_MAX_QUANT_ELEMENTS; j++)
+             iq_matrix->quantiser_table[i][j] = quant_table->quant_table[j];
+         iq_matrix->load_quantiser_table[i] = 1;
+         quant_table->valid = FALSE;
+     }
+-    return TRUE;
++    return GST_VAAPI_DECODER_STATUS_SUCCESS;
+ }
+ 
+ static gboolean
+-fill_huffman_table(
+-    GstVaapiDecoderJpeg *decoder, 
+-    GstVaapiPicture     *picture
+-)
++huffman_tables_updated(const GstJpegHuffmanTables *huf_tables)
+ {
+-    GstVaapiDecoderJpegPrivate * const priv = &decoder->priv;
+-    GstJpegHuffmanTables * const huf_tables = &priv->huf_tables;
+-    VAHuffmanTableBufferJPEGBaseline *huffman_table;
+-    guint i, num_tables;
++    guint i;
+ 
+-    if (!priv->has_huf_table)
+-        gst_jpeg_get_default_huffman_tables(&priv->huf_tables);
+-    
+-    picture->huf_table = GST_VAAPI_HUFFMAN_TABLE_NEW(JPEGBaseline, decoder);
+-    g_assert(picture->huf_table);
+-    huffman_table = picture->huf_table->param;
++    for (i = 0; i < G_N_ELEMENTS(huf_tables->dc_tables); i++)
++        if (huf_tables->dc_tables[i].valid)
++            return TRUE;
++    for (i = 0; i < G_N_ELEMENTS(huf_tables->ac_tables); i++)
++        if (huf_tables->ac_tables[i].valid)
++            return TRUE;
++    return FALSE;
++}
++
++static void
++huffman_tables_reset(GstJpegHuffmanTables *huf_tables)
++{
++    guint i;
++
++    for (i = 0; i < G_N_ELEMENTS(huf_tables->dc_tables); i++)
++        huf_tables->dc_tables[i].valid = FALSE;
++    for (i = 0; i < G_N_ELEMENTS(huf_tables->ac_tables); i++)
++        huf_tables->ac_tables[i].valid = FALSE;
++}
++
++static void
++fill_huffman_table(GstVaapiHuffmanTable *huf_table,
++    const GstJpegHuffmanTables *huf_tables)
++{
++    VAHuffmanTableBufferJPEGBaseline * const huffman_table = huf_table->param;
++    guint i, num_tables;
+ 
+     num_tables = MIN(G_N_ELEMENTS(huffman_table->huffman_table),
+                      GST_JPEG_MAX_SCAN_COMPONENTS);
+@@ -311,85 +370,71 @@ fill_huffman_table(
+                0,
+                sizeof(huffman_table->huffman_table[i].pad));
+     }
+-    return TRUE;
+ }
+ 
+-static guint
+-get_max_horizontal_samples(GstJpegFrameHdr *frame_hdr)
++static void
++get_max_sampling_factors(const GstJpegFrameHdr *frame_hdr,
++    guint *h_max_ptr, guint *v_max_ptr)
+ {
+-    guint i, max_factor = 0;
++    guint h_max = frame_hdr->components[0].horizontal_factor;
++    guint v_max = frame_hdr->components[0].vertical_factor;
++    guint i;
+ 
+-    for (i = 0; i < frame_hdr->num_components; i++) {
+-        if (frame_hdr->components[i].horizontal_factor > max_factor)
+-            max_factor = frame_hdr->components[i].horizontal_factor;
++    for (i = 1; i < frame_hdr->num_components; i++) {
++        const GstJpegFrameComponent * const fcp = &frame_hdr->components[i];
++        if (h_max < fcp->horizontal_factor)
++            h_max = fcp->horizontal_factor;
++        if (v_max < fcp->vertical_factor)
++            v_max = fcp->vertical_factor;
+     }
+-    return max_factor;
++
++    if (h_max_ptr)
++        *h_max_ptr = h_max;
++    if (v_max_ptr)
++        *v_max_ptr = v_max;
+ }
+ 
+-static guint
+-get_max_vertical_samples(GstJpegFrameHdr *frame_hdr)
++static const GstJpegFrameComponent *
++get_component(const GstJpegFrameHdr *frame_hdr, guint selector)
+ {
+-    guint i, max_factor = 0;
++    guint i;
+ 
+     for (i = 0; i < frame_hdr->num_components; i++) {
+-        if (frame_hdr->components[i].vertical_factor > max_factor)
+-            max_factor = frame_hdr->components[i].vertical_factor;
++        const GstJpegFrameComponent * const fcp = &frame_hdr->components[i];
++        if (fcp->identifier == selector)
++            return fcp;
+     }
+-    return max_factor;
++    return NULL;
+ }
+ 
+ static GstVaapiDecoderStatus
+-decode_picture(
+-    GstVaapiDecoderJpeg *decoder, 
+-    guint8               profile,
+-    const guchar        *buf,
+-    guint                buf_size
+-)
++decode_picture(GstVaapiDecoderJpeg *decoder, GstJpegMarkerSegment *seg,
++    const guchar *buf)
+ {
+     GstVaapiDecoderJpegPrivate * const priv = &decoder->priv;
+     GstJpegFrameHdr * const frame_hdr = &priv->frame_hdr;
+-    GstVaapiPicture *picture;
+-    GstVaapiDecoderStatus status;
+ 
+-    switch (profile) {
++    if (!VALID_STATE(decoder, GOT_SOI))
++        return GST_VAAPI_DECODER_STATUS_SUCCESS;
++
++    switch (seg->marker) {
+     case GST_JPEG_MARKER_SOF_MIN:
+         priv->profile = GST_VAAPI_PROFILE_JPEG_BASELINE;
+         break;
+     default:
+-        GST_ERROR("unsupported profile %d", profile);
++        GST_ERROR("unsupported profile %d", seg->marker);
+         return GST_VAAPI_DECODER_STATUS_ERROR_UNSUPPORTED_PROFILE;
+     }
+ 
+     memset(frame_hdr, 0, sizeof(*frame_hdr));
+-    if (!gst_jpeg_parse_frame_hdr(frame_hdr, buf, buf_size, 0)) {
++    if (!gst_jpeg_parse_frame_hdr(frame_hdr, buf + seg->offset, seg->size, 0)) {
+         GST_ERROR("failed to parse image");
+         return GST_VAAPI_DECODER_STATUS_ERROR_BITSTREAM_PARSER;
+     }
+     priv->height = frame_hdr->height;
+     priv->width  = frame_hdr->width;
+ 
+-    status = ensure_context(decoder);
+-    if (status != GST_VAAPI_DECODER_STATUS_SUCCESS) {
+-        GST_ERROR("failed to reset context");
+-        return status;
+-    }
+-
+-    if (priv->current_picture && !decode_current_picture(decoder))
+-        return GST_VAAPI_DECODER_STATUS_ERROR_UNKNOWN;
+-
+-    picture = GST_VAAPI_PICTURE_NEW(JPEGBaseline, decoder);
+-    if (!picture) {
+-        GST_ERROR("failed to allocate picture");
+-        return GST_VAAPI_DECODER_STATUS_ERROR_ALLOCATION_FAILED;
+-    }
+-    gst_vaapi_picture_replace(&priv->current_picture, picture);
+-    gst_vaapi_picture_unref(picture);
+-
+-    if (!fill_picture(decoder, picture, frame_hdr))
+-        return GST_VAAPI_DECODER_STATUS_ERROR_UNKNOWN;
+-
+-    /* Update presentation time */
+-    picture->pts = GST_VAAPI_DECODER_CODEC_FRAME(decoder)->pts;
++    priv->decoder_state |= GST_JPEG_VIDEO_STATE_GOT_SOF;
+     return GST_VAAPI_DECODER_STATUS_SUCCESS;
+ }
+ 
+@@ -402,11 +447,15 @@ decode_huffman_table(
+ {
+     GstVaapiDecoderJpegPrivate * const priv = &decoder->priv;
+ 
++    if (!VALID_STATE(decoder, GOT_SOI))
++        return GST_VAAPI_DECODER_STATUS_SUCCESS;
++
+     if (!gst_jpeg_parse_huffman_table(&priv->huf_tables, buf, buf_size, 0)) {
+-        GST_DEBUG("failed to parse Huffman table");
++        GST_ERROR("failed to parse Huffman table");
+         return GST_VAAPI_DECODER_STATUS_ERROR_BITSTREAM_PARSER;
+     }
+-    priv->has_huf_table = TRUE;
++
++    priv->decoder_state |= GST_JPEG_VIDEO_STATE_GOT_HUF_TABLE;
+     return GST_VAAPI_DECODER_STATUS_SUCCESS;
+ }
+ 
+@@ -419,11 +468,15 @@ decode_quant_table(
+ {
+     GstVaapiDecoderJpegPrivate * const priv = &decoder->priv;
+ 
++    if (!VALID_STATE(decoder, GOT_SOI))
++        return GST_VAAPI_DECODER_STATUS_SUCCESS;
++
+     if (!gst_jpeg_parse_quant_table(&priv->quant_tables, buf, buf_size, 0)) {
+-        GST_DEBUG("failed to parse quantization table");
++        GST_ERROR("failed to parse quantization table");
+         return GST_VAAPI_DECODER_STATUS_ERROR_BITSTREAM_PARSER;
+     }
+-    priv->has_quant_table = TRUE;
++
++    priv->decoder_state |= GST_JPEG_VIDEO_STATE_GOT_IQ_TABLE;
+     return GST_VAAPI_DECODER_STATUS_SUCCESS;
+ }
+ 
+@@ -436,55 +489,64 @@ decode_restart_interval(
+ {
+     GstVaapiDecoderJpegPrivate * const priv = &decoder->priv;
+ 
++    if (!VALID_STATE(decoder, GOT_SOI))
++        return GST_VAAPI_DECODER_STATUS_SUCCESS;
++
+     if (!gst_jpeg_parse_restart_interval(&priv->mcu_restart, buf, buf_size, 0)) {
+-        GST_DEBUG("failed to parse restart interval");
++        GST_ERROR("failed to parse restart interval");
+         return GST_VAAPI_DECODER_STATUS_ERROR_BITSTREAM_PARSER;
+     }
+     return GST_VAAPI_DECODER_STATUS_SUCCESS;
+ }
+ 
+ static GstVaapiDecoderStatus
+-decode_scan(
+-    GstVaapiDecoderJpeg *decoder,
+-    const guchar        *scan_header,
+-    guint                scan_header_size,
+-    const guchar        *scan_data,
+-    guint                scan_data_size
+-)
++decode_scan(GstVaapiDecoderJpeg *decoder, GstJpegMarkerSegment *seg,
++    const guchar *buf)
+ {
+     GstVaapiDecoderJpegPrivate * const priv = &decoder->priv;
+-    GstVaapiPicture *picture = priv->current_picture;
++    GstVaapiPicture * const picture = priv->current_picture;
++    GstVaapiSlice *slice;
+     VASliceParameterBufferJPEGBaseline *slice_param;
+-    GstVaapiSlice *gst_slice;
+-    guint total_h_samples, total_v_samples;
+-    GstJpegScanHdr  scan_hdr;
+-    guint i;
++    GstJpegScanHdr scan_hdr;
++    guint scan_hdr_size, scan_data_size;
++    guint i, h_max, v_max, mcu_width, mcu_height;
+ 
+-    if (!picture) {
+-        GST_ERROR("There is no VAPicture before decoding scan.");
+-        return GST_VAAPI_DECODER_STATUS_ERROR_INVALID_SURFACE;
+-    }
+-
+-    if (!fill_quantization_table(decoder, picture)) {
+-        GST_ERROR("failed to fill in quantization table");
+-        return GST_VAAPI_DECODER_STATUS_ERROR_UNKNOWN;
+-    }
++    if (!VALID_STATE(decoder, GOT_SOF))
++        return GST_VAAPI_DECODER_STATUS_SUCCESS;
+ 
+-    if (!fill_huffman_table(decoder, picture)) {
+-        GST_ERROR("failed to fill in huffman table");
+-        return GST_VAAPI_DECODER_STATUS_ERROR_UNKNOWN;
+-    }
++    scan_hdr_size = (buf[seg->offset] << 8) | buf[seg->offset + 1];
++    scan_data_size = seg->size - scan_hdr_size;
+ 
+     memset(&scan_hdr, 0, sizeof(scan_hdr));
+-    if (!gst_jpeg_parse_scan_hdr(&scan_hdr, scan_header, scan_header_size, 0)) {
+-        GST_DEBUG("Jpeg parsed scan failed.");
++    if (!gst_jpeg_parse_scan_hdr(&scan_hdr, buf + seg->offset, seg->size, 0)) {
++        GST_ERROR("failed to parse scan header");
+         return GST_VAAPI_DECODER_STATUS_ERROR_BITSTREAM_PARSER;
+     }
+ 
+-    gst_slice = GST_VAAPI_SLICE_NEW(JPEGBaseline, decoder, scan_data, scan_data_size);
+-    gst_vaapi_picture_add_slice(picture, gst_slice);
++    slice = GST_VAAPI_SLICE_NEW(JPEGBaseline, decoder,
++        buf + seg->offset + scan_hdr_size, scan_data_size);
++    if (!slice) {
++        GST_ERROR("failed to allocate slice");
++        return GST_VAAPI_DECODER_STATUS_ERROR_ALLOCATION_FAILED;
++    }
++    gst_vaapi_picture_add_slice(picture, slice);
++
++    if (!VALID_STATE(decoder, GOT_HUF_TABLE))
++        gst_jpeg_get_default_huffman_tables(&priv->huf_tables);
+ 
+-    slice_param = gst_slice->param;
++    // Update VA Huffman table if it changed for this scan
++    if (huffman_tables_updated(&priv->huf_tables)) {
++        slice->huf_table = GST_VAAPI_HUFFMAN_TABLE_NEW(JPEGBaseline, decoder);
++        if (!slice->huf_table) {
++            GST_ERROR("failed to allocate Huffman tables");
++            huffman_tables_reset(&priv->huf_tables);
++            return GST_VAAPI_DECODER_STATUS_ERROR_ALLOCATION_FAILED;
++        }
++        fill_huffman_table(slice->huf_table, &priv->huf_tables);
++        huffman_tables_reset(&priv->huf_tables);
++    }
++
++    slice_param = slice->param;
+     slice_param->num_components = scan_hdr.num_components;
+     for (i = 0; i < scan_hdr.num_components; i++) {
+         slice_param->components[i].component_selector =
+@@ -495,142 +557,73 @@ decode_scan(
+             scan_hdr.components[i].ac_selector;
+     }
+     slice_param->restart_interval = priv->mcu_restart;
+-    if (scan_hdr.num_components == 1) { /*non-interleaved*/
+-        slice_param->slice_horizontal_position = 0;
+-        slice_param->slice_vertical_position = 0;
+-        /* Y mcu numbers*/
+-        if (slice_param->components[0].component_selector == priv->frame_hdr.components[0].identifier) {
+-            slice_param->num_mcus = (priv->frame_hdr.width/8)*(priv->frame_hdr.height/8);
+-        } else { /*Cr, Cb mcu numbers*/
+-            slice_param->num_mcus = (priv->frame_hdr.width/16)*(priv->frame_hdr.height/16);
++    slice_param->slice_horizontal_position = 0;
++    slice_param->slice_vertical_position = 0;
++
++    get_max_sampling_factors(&priv->frame_hdr, &h_max, &v_max);
++    mcu_width = 8 * h_max;
++    mcu_height = 8 * v_max;
++
++    if (scan_hdr.num_components == 1) { // Non-interleaved
++        const guint Csj = slice_param->components[0].component_selector;
++        const GstJpegFrameComponent * const fcp =
++            get_component(&priv->frame_hdr, Csj);
++
++        if (!fcp || fcp->horizontal_factor == 0 || fcp->vertical_factor == 0) {
++            GST_ERROR("failed to validate image component %u", Csj);
++            return GST_VAAPI_DECODER_STATUS_ERROR_INVALID_PARAMETER;
+         }
+-    } else { /* interleaved */
+-        slice_param->slice_horizontal_position = 0;
+-        slice_param->slice_vertical_position = 0;
+-        total_v_samples = get_max_vertical_samples(&priv->frame_hdr);
+-        total_h_samples = get_max_horizontal_samples(&priv->frame_hdr);
+-        slice_param->num_mcus = ((priv->frame_hdr.width + total_h_samples*8 - 1)/(total_h_samples*8)) *
+-                                ((priv->frame_hdr.height + total_v_samples*8 -1)/(total_v_samples*8));
++        mcu_width /= fcp->horizontal_factor;
++        mcu_height /= fcp->vertical_factor;
+     }
++    slice_param->num_mcus =
++        ((priv->frame_hdr.width + mcu_width - 1) / mcu_width) *
++        ((priv->frame_hdr.height + mcu_height - 1) / mcu_height);
+ 
+-    if (picture->slices && picture->slices->len)
+-        return GST_VAAPI_DECODER_STATUS_SUCCESS;
+-    return GST_VAAPI_DECODER_STATUS_ERROR_NO_DATA;
++    priv->decoder_state |= GST_JPEG_VIDEO_STATE_GOT_SOS;
++    return GST_VAAPI_DECODER_STATUS_SUCCESS;
+ }
+ 
+ static GstVaapiDecoderStatus
+-decode_buffer(GstVaapiDecoderJpeg *decoder, const guchar *buf, guint buf_size)
++decode_segment(GstVaapiDecoderJpeg *decoder, GstJpegMarkerSegment *seg,
++    const guchar *buf)
+ {
+     GstVaapiDecoderJpegPrivate * const priv = &decoder->priv;
+-    GstVaapiDecoderStatus status = GST_VAAPI_DECODER_STATUS_ERROR_NO_DATA;
+-    GstJpegMarkerSegment seg;
+-    GstJpegScanSegment scan_seg;
+-    guint ofs;
+-    gboolean append_ecs;
+-
+-    memset(&scan_seg, 0, sizeof(scan_seg));
+-
+-    ofs = 0;
+-    while (gst_jpeg_parse(&seg, buf, buf_size, ofs)) {
+-        if (seg.size < 0) {
+-            GST_DEBUG("buffer to short for parsing");
+-            return GST_VAAPI_DECODER_STATUS_ERROR_NO_DATA;
+-        }
+-        ofs += seg.size;
+-
+-        /* Decode scan, if complete */
+-        if (seg.marker == GST_JPEG_MARKER_EOI && scan_seg.header_size > 0) {
+-            scan_seg.data_size = seg.offset - scan_seg.data_offset;
+-            scan_seg.is_valid  = TRUE;
+-        }
+-        if (scan_seg.is_valid) {
+-            status = decode_scan(
+-                decoder,
+-                buf + scan_seg.header_offset,
+-                scan_seg.header_size,
+-                buf + scan_seg.data_offset,
+-                scan_seg.data_size
+-            );
+-            if (status != GST_VAAPI_DECODER_STATUS_SUCCESS)
+-                break;
+-            memset(&scan_seg, 0, sizeof(scan_seg));
+-        }
+-
+-        append_ecs = TRUE;
+-        switch (seg.marker) {
+-        case GST_JPEG_MARKER_SOI:
+-            priv->has_quant_table = FALSE;
+-            priv->has_huf_table   = FALSE;
+-            priv->mcu_restart     = 0;
+-            status = GST_VAAPI_DECODER_STATUS_SUCCESS;
+-            break;
+-        case GST_JPEG_MARKER_EOI:
+-            if (decode_current_picture(decoder)) {
+-                /* Get out of the loop, trailing data is not needed */
+-                status = GST_VAAPI_DECODER_STATUS_SUCCESS;
+-                goto end;
+-            }
+-            status = GST_VAAPI_DECODER_STATUS_ERROR_UNKNOWN;
+-            break;
+-        case GST_JPEG_MARKER_DHT:
+-            status = decode_huffman_table(decoder, buf + seg.offset, seg.size);
+-            break;
+-        case GST_JPEG_MARKER_DQT:
+-            status = decode_quant_table(decoder, buf + seg.offset, seg.size);
+-            break;
+-        case GST_JPEG_MARKER_DRI:
+-            status = decode_restart_interval(decoder, buf + seg.offset, seg.size);
+-            break;
+-        case GST_JPEG_MARKER_DAC:
+-            GST_ERROR("unsupported arithmetic coding mode");
+-            status = GST_VAAPI_DECODER_STATUS_ERROR_UNSUPPORTED_PROFILE;
+-            break;
+-        case GST_JPEG_MARKER_SOS:
+-            scan_seg.header_offset = seg.offset;
+-            scan_seg.header_size   = seg.size;
+-            scan_seg.data_offset   = seg.offset + seg.size;
+-            scan_seg.data_size     = 0;
+-            append_ecs             = FALSE;
+-            break;
+-        default:
+-            /* Restart marker */
+-            if (seg.marker >= GST_JPEG_MARKER_RST_MIN &&
+-                seg.marker <= GST_JPEG_MARKER_RST_MAX) {
+-                append_ecs = FALSE;
+-                break;
+-            }
+-
+-            /* Frame header */
+-            if (seg.marker >= GST_JPEG_MARKER_SOF_MIN &&
+-                seg.marker <= GST_JPEG_MARKER_SOF_MAX) {
+-                status = decode_picture(
+-                    decoder,
+-                    seg.marker,
+-                    buf + seg.offset, seg.size
+-                );
+-                break;
+-            }
+-
+-            /* Application segments */
+-            if (seg.marker >= GST_JPEG_MARKER_APP_MIN &&
+-                seg.marker <= GST_JPEG_MARKER_APP_MAX) {
+-                status = GST_VAAPI_DECODER_STATUS_SUCCESS;
+-                break;
+-            }
+-
+-            GST_WARNING("unsupported marker (0x%02x)", seg.marker);
+-            status = GST_VAAPI_DECODER_STATUS_ERROR_BITSTREAM_PARSER;
+-            break;
+-        }
+-
+-        /* Append entropy coded segments */
+-        if (append_ecs)
+-            scan_seg.data_size = seg.offset - scan_seg.data_offset;
++    GstVaapiDecoderStatus status;
+ 
+-        if (status != GST_VAAPI_DECODER_STATUS_SUCCESS)
+-            break;
++    // Decode segment
++    status = GST_VAAPI_DECODER_STATUS_SUCCESS;
++    switch (seg->marker) {
++    case GST_JPEG_MARKER_SOI:
++        priv->mcu_restart = 0;
++        priv->decoder_state |= GST_JPEG_VIDEO_STATE_GOT_SOI;
++        break;
++    case GST_JPEG_MARKER_EOI:
++        priv->decoder_state = 0;
++        break;
++    case GST_JPEG_MARKER_DAC:
++        GST_ERROR("unsupported arithmetic coding mode");
++        status = GST_VAAPI_DECODER_STATUS_ERROR_UNSUPPORTED_PROFILE;
++        break;
++    case GST_JPEG_MARKER_DHT:
++        status = decode_huffman_table(decoder, buf + seg->offset, seg->size);
++        break;
++    case GST_JPEG_MARKER_DQT:
++        status = decode_quant_table(decoder, buf + seg->offset, seg->size);
++        break;
++    case GST_JPEG_MARKER_DRI:
++        status = decode_restart_interval(decoder, buf + seg->offset, seg->size);
++        break;
++    case GST_JPEG_MARKER_SOS:
++        status = decode_scan(decoder, seg, buf);
++        break;
++    default:
++        // SOFn segments
++        if (seg->marker >= GST_JPEG_MARKER_SOF_MIN &&
++            seg->marker <= GST_JPEG_MARKER_SOF_MAX)
++            status = decode_picture(decoder, seg, buf);
++        break;
+     }
+-end:
+     return status;
+ }
+ 
+@@ -647,11 +640,11 @@ ensure_decoder(GstVaapiDecoderJpeg *decoder)
+     return GST_VAAPI_DECODER_STATUS_SUCCESS;
+ }
+ 
+-static inline gint
+-scan_for_start_code(GstAdapter *adapter, guint ofs, guint size, guint32 *scp)
++static gboolean
++is_scan_complete(GstJpegMarkerCode marker)
+ {
+-    return (gint)gst_adapter_masked_scan_uint32_peek(adapter,
+-        0xffff0000, 0xffd80000, ofs, size, scp);
++    // Scan is assumed to be complete when the new segment is not RSTi
++    return marker < GST_JPEG_MARKER_RST_MIN || marker > GST_JPEG_MARKER_RST_MAX;
+ }
+ 
+ static GstVaapiDecoderStatus
+@@ -660,40 +653,129 @@ gst_vaapi_decoder_jpeg_parse(GstVaapiDecoder *base_decoder,
+ {
+     GstVaapiDecoderJpeg * const decoder =
+         GST_VAAPI_DECODER_JPEG_CAST(base_decoder);
++    GstVaapiDecoderJpegPrivate * const priv = &decoder->priv;
++    GstVaapiParserState * const ps = GST_VAAPI_PARSER_STATE(base_decoder);
+     GstVaapiDecoderStatus status;
+-    guint size, buf_size, flags = 0;
+-    gint ofs;
++    GstJpegMarkerCode marker;
++    GstJpegMarkerSegment seg;
++    const guchar *buf;
++    guint buf_size, flags;
++    gint ofs1, ofs2;
+ 
+     status = ensure_decoder(decoder);
+     if (status != GST_VAAPI_DECODER_STATUS_SUCCESS)
+         return status;
+ 
+-    /* Expect at least 4 bytes, SOI .. EOI */
+-    size = gst_adapter_available(adapter);
+-    if (size < 4)
++    /* Expect at least 2 bytes for the marker */
++    buf_size = gst_adapter_available(adapter);
++    if (buf_size < 2)
+         return GST_VAAPI_DECODER_STATUS_ERROR_NO_DATA;
+ 
+-    ofs = scan_for_start_code(adapter, 0, size, NULL);
+-    if (ofs < 0)
++    buf = gst_adapter_map(adapter, buf_size);
++    if (!buf)
+         return GST_VAAPI_DECODER_STATUS_ERROR_NO_DATA;
+-    gst_adapter_flush(adapter, ofs);
+-    size -= ofs;
+-
+-    ofs = G_UNLIKELY(size < 4) ? -1 :
+-        scan_for_start_code(adapter, 2, size - 2, NULL);
+-    if (ofs < 0) {
+-        // Assume the whole packet is present if end-of-stream
+-        if (!at_eos)
+-            return GST_VAAPI_DECODER_STATUS_ERROR_NO_DATA;
+-        ofs = size;
+-    }
+-    buf_size = ofs;
+ 
+-    unit->size = buf_size;
++    ofs1 = ps->input_offset1 - 2;
++    if (ofs1 < 0)
++        ofs1 = 0;
+ 
+-    flags |= GST_VAAPI_DECODER_UNIT_FLAG_FRAME_START;
+-    flags |= GST_VAAPI_DECODER_UNIT_FLAG_FRAME_END;
+-    flags |= GST_VAAPI_DECODER_UNIT_FLAG_SLICE;
++    for (;;) {
++        // Skip any garbage until we reach SOI, if needed
++        if (!gst_jpeg_parse(&seg, buf, buf_size, ofs1)) {
++            gst_adapter_unmap(adapter);
++            ps->input_offset1 = buf_size;
++            return GST_VAAPI_DECODER_STATUS_ERROR_NO_DATA;
++        }
++        ofs1 = seg.offset;
++
++        marker = seg.marker;
++        if (!VALID_STATE(parser, GOT_SOI) && marker != GST_JPEG_MARKER_SOI)
++            continue;
++        if (marker == GST_JPEG_MARKER_SOS) {
++            ofs2 = ps->input_offset2 - 2;
++            if (ofs2 < ofs1 + seg.size)
++                ofs2 = ofs1 + seg.size;
++
++            // Parse the whole scan + ECSs, including RSTi
++            for (;;) {
++                if (!gst_jpeg_parse(&seg, buf, buf_size, ofs2)) {
++                    gst_adapter_unmap(adapter);
++                    ps->input_offset1 = ofs1;
++                    ps->input_offset2 = buf_size;
++                    return GST_VAAPI_DECODER_STATUS_ERROR_NO_DATA;
++                }
++
++                if (is_scan_complete(seg.marker))
++                    break;
++                ofs2 = seg.offset + seg.size;
++            }
++            ofs2 = seg.offset - 2;
++        }
++        else {
++            // Check that the whole segment is actually available (in buffer)
++            ofs2 = ofs1 + seg.size;
++            if (ofs2 > buf_size) {
++                gst_adapter_unmap(adapter);
++                ps->input_offset1 = ofs1;
++                return GST_VAAPI_DECODER_STATUS_ERROR_NO_DATA;
++            }
++        }
++        break;
++    }
++    gst_adapter_unmap(adapter);
++
++    unit->size = ofs2 - ofs1;
++    unit_set_marker_code(unit, marker);
++    gst_adapter_flush(adapter, ofs1);
++    ps->input_offset1 = 2;
++    ps->input_offset2 = 2;
++
++    flags = 0;
++    switch (marker) {
++    case GST_JPEG_MARKER_SOI:
++        flags |= GST_VAAPI_DECODER_UNIT_FLAG_FRAME_START;
++        priv->parser_state |= GST_JPEG_VIDEO_STATE_GOT_SOI;
++        break;
++    case GST_JPEG_MARKER_EOI:
++        flags |= GST_VAAPI_DECODER_UNIT_FLAG_FRAME_END;
++        priv->parser_state = 0;
++        break;
++    case GST_JPEG_MARKER_SOS:
++        flags |= GST_VAAPI_DECODER_UNIT_FLAG_SLICE;
++        priv->parser_state |= GST_JPEG_VIDEO_STATE_GOT_SOS;
++        break;
++    case GST_JPEG_MARKER_DAC:
++    case GST_JPEG_MARKER_DHT:
++    case GST_JPEG_MARKER_DQT:
++        if (priv->parser_state & GST_JPEG_VIDEO_STATE_GOT_SOF)
++            flags |= GST_VAAPI_DECODER_UNIT_FLAG_SLICE;
++        break;
++    case GST_JPEG_MARKER_DRI:
++        if (priv->parser_state & GST_JPEG_VIDEO_STATE_GOT_SOS)
++            flags |= GST_VAAPI_DECODER_UNIT_FLAG_SLICE;
++        break;
++    case GST_JPEG_MARKER_DNL:
++        flags |= GST_VAAPI_DECODER_UNIT_FLAG_SLICE;
++        break;
++    case GST_JPEG_MARKER_COM:
++        flags |= GST_VAAPI_DECODER_UNIT_FLAG_SKIP;
++        break;
++    default:
++        /* SOFn segments */
++        if (marker >= GST_JPEG_MARKER_SOF_MIN &&
++            marker <= GST_JPEG_MARKER_SOF_MAX)
++            priv->parser_state |= GST_JPEG_VIDEO_STATE_GOT_SOF;
++
++        /* Application segments */
++        else if (marker >= GST_JPEG_MARKER_APP_MIN &&
++                 marker <= GST_JPEG_MARKER_APP_MAX)
++            flags |= GST_VAAPI_DECODER_UNIT_FLAG_SKIP;
++
++        /* Reserved */
++        else if (marker >= 0x02 && marker <= 0xbf)
++            flags |= GST_VAAPI_DECODER_UNIT_FLAG_SKIP;
++        break;
++    }
+     GST_VAAPI_DECODER_UNIT_FLAG_SET(unit, flags);
+     return GST_VAAPI_DECODER_STATUS_SUCCESS;
+ }
+@@ -705,6 +787,7 @@ gst_vaapi_decoder_jpeg_decode(GstVaapiDecoder *base_decoder,
+     GstVaapiDecoderJpeg * const decoder =
+         GST_VAAPI_DECODER_JPEG_CAST(base_decoder);
+     GstVaapiDecoderStatus status;
++    GstJpegMarkerSegment seg;
+     GstBuffer * const buffer =
+         GST_VAAPI_DECODER_CODEC_FRAME(decoder)->input_buffer;
+     GstMapInfo map_info;
+@@ -718,13 +801,65 @@ gst_vaapi_decoder_jpeg_decode(GstVaapiDecoder *base_decoder,
+         return GST_VAAPI_DECODER_STATUS_ERROR_UNKNOWN;
+     }
+ 
+-    status = decode_buffer(decoder, map_info.data + unit->offset, unit->size);
++    seg.marker = unit_get_marker_code(unit);
++    seg.offset = unit->offset;
++    seg.size = unit->size;
++
++    status = decode_segment(decoder, &seg, map_info.data);
+     gst_buffer_unmap(buffer, &map_info);
+     if (status != GST_VAAPI_DECODER_STATUS_SUCCESS)
+         return status;
+     return GST_VAAPI_DECODER_STATUS_SUCCESS;
+ }
+ 
++static GstVaapiDecoderStatus
++gst_vaapi_decoder_jpeg_start_frame(GstVaapiDecoder *base_decoder,
++    GstVaapiDecoderUnit *base_unit)
++{
++    GstVaapiDecoderJpeg * const decoder =
++        GST_VAAPI_DECODER_JPEG_CAST(base_decoder);
++    GstVaapiDecoderJpegPrivate * const priv = &decoder->priv;
++    GstVaapiPicture *picture;
++    GstVaapiDecoderStatus status;
++
++    if (!VALID_STATE(decoder, GOT_SOF))
++        return GST_VAAPI_DECODER_STATUS_SUCCESS;
++
++    status = ensure_context(decoder);
++    if (status != GST_VAAPI_DECODER_STATUS_SUCCESS) {
++        GST_ERROR("failed to reset context");
++        return status;
++    }
++
++    picture = GST_VAAPI_PICTURE_NEW(JPEGBaseline, decoder);
++    if (!picture) {
++        GST_ERROR("failed to allocate picture");
++        return GST_VAAPI_DECODER_STATUS_ERROR_ALLOCATION_FAILED;
++    }
++    gst_vaapi_picture_replace(&priv->current_picture, picture);
++    gst_vaapi_picture_unref(picture);
++
++    if (!fill_picture(decoder, picture, &priv->frame_hdr))
++        return GST_VAAPI_DECODER_STATUS_ERROR_UNKNOWN;
++
++    status = fill_quantization_table(decoder, picture);
++    if (status != GST_VAAPI_DECODER_STATUS_SUCCESS)
++        return status;
++
++    /* Update presentation time */
++    picture->pts = GST_VAAPI_DECODER_CODEC_FRAME(decoder)->pts;
++    return GST_VAAPI_DECODER_STATUS_SUCCESS;
++}
++
++static GstVaapiDecoderStatus
++gst_vaapi_decoder_jpeg_end_frame(GstVaapiDecoder *base_decoder)
++{
++    GstVaapiDecoderJpeg * const decoder =
++        GST_VAAPI_DECODER_JPEG_CAST(base_decoder);
++
++    return decode_current_picture(decoder);
++}
++
+ static void
+ gst_vaapi_decoder_jpeg_class_init(GstVaapiDecoderJpegClass *klass)
+ {
+@@ -739,6 +874,8 @@ gst_vaapi_decoder_jpeg_class_init(GstVaapiDecoderJpegClass *klass)
+     decoder_class->destroy      = gst_vaapi_decoder_jpeg_destroy;
+     decoder_class->parse        = gst_vaapi_decoder_jpeg_parse;
+     decoder_class->decode       = gst_vaapi_decoder_jpeg_decode;
++    decoder_class->start_frame  = gst_vaapi_decoder_jpeg_start_frame;
++    decoder_class->end_frame    = gst_vaapi_decoder_jpeg_end_frame;
+ }
+ 
+ static inline const GstVaapiDecoderClass *
+diff --git a/gst-libs/gst/vaapi/gstvaapidecoder_objects.c b/gst-libs/gst/vaapi/gstvaapidecoder_objects.c
+index fbbe5f7..218b512 100644
+--- a/gst-libs/gst/vaapi/gstvaapidecoder_objects.c
++++ b/gst-libs/gst/vaapi/gstvaapidecoder_objects.c
+@@ -291,6 +291,11 @@ gst_vaapi_picture_decode(GstVaapiPicture *picture)
+         GstVaapiSlice * const slice = g_ptr_array_index(picture->slices, i);
+         VABufferID va_buffers[2];
+ 
++        huf_table = slice->huf_table;
++        if (huf_table && !do_decode(va_display, va_context,
++                &huf_table->param_id, (void **)&huf_table->param))
++            return FALSE;
++
+         vaapi_unmap_buffer(va_display, slice->param_id, NULL);
+         va_buffers[0] = slice->param_id;
+         va_buffers[1] = slice->data_id;
+@@ -396,6 +401,9 @@ gst_vaapi_slice_destroy(GstVaapiSlice *slice)
+ {
+     VADisplay const va_display = GET_VA_DISPLAY(slice);
+ 
++    gst_vaapi_mini_object_replace((GstVaapiMiniObject **)&slice->huf_table,
++        NULL);
++
+     vaapi_destroy_buffer(va_display, &slice->data_id);
+     vaapi_destroy_buffer(va_display, &slice->param_id);
+     slice->param = NULL;
+diff --git a/gst-libs/gst/vaapi/gstvaapidecoder_objects.h b/gst-libs/gst/vaapi/gstvaapidecoder_objects.h
+index 90e8f04..3d595ae 100644
+--- a/gst-libs/gst/vaapi/gstvaapidecoder_objects.h
++++ b/gst-libs/gst/vaapi/gstvaapidecoder_objects.h
+@@ -216,6 +216,9 @@ struct _GstVaapiSlice {
+     VABufferID                  param_id;
+     VABufferID                  data_id;
+     gpointer                    param;
++
++    /* Per-slice overrides */
++    GstVaapiHuffmanTable       *huf_table;
+ };
+ 
+ G_GNUC_INTERNAL
+diff --git a/gst-libs/gst/vaapi/gstvaapidecoder_priv.h b/gst-libs/gst/vaapi/gstvaapidecoder_priv.h
+index a86b4a1..8b6d897 100644
+--- a/gst-libs/gst/vaapi/gstvaapidecoder_priv.h
++++ b/gst-libs/gst/vaapi/gstvaapidecoder_priv.h
+@@ -168,6 +168,7 @@ struct _GstVaapiParserState {
+     GstVideoCodecFrame *current_frame;
+     GstAdapter         *current_adapter;
+     GstAdapter         *input_adapter;
++    gint                input_offset1;
+     gint                input_offset2;
+     GstAdapter         *output_adapter;
+     GstVaapiDecoderUnit next_unit;
+diff --git a/gst/vaapi/Makefile.am b/gst/vaapi/Makefile.am
+index 1b89467..0b8a45e 100644
+--- a/gst/vaapi/Makefile.am
++++ b/gst/vaapi/Makefile.am
+@@ -33,38 +33,60 @@ libgstvaapi_source_c = \
+ 	gstvaapi.c		\
+ 	gstvaapidecode.c	\
+ 	gstvaapipluginutil.c	\
+-	gstvaapipostproc.c	\
+ 	gstvaapisink.c		\
+ 	gstvaapiuploader.c	\
+ 	gstvaapivideobuffer.c	\
++	gstvaapivideocontext.c	\
+ 	gstvaapivideometa.c	\
+ 	$(NULL)
+ 
+ libgstvaapi_source_h = \
+ 	gstvaapidecode.h	\
+ 	gstvaapipluginutil.h	\
+-	gstvaapipostproc.h	\
+ 	gstvaapisink.h		\
+ 	gstvaapiuploader.h	\
+ 	gstvaapivideobuffer.h	\
++	gstvaapivideocontext.h	\
+ 	gstvaapivideometa.h	\
+ 	$(NULL)
+ 
++if !USE_GST_API_1_2p
++libgstvaapi_source_c += gstvaapipostproc.c
++libgstvaapi_source_h += gstvaapipostproc.h
++endif
++
+ libgstvaapi_x11_source_c = gstvaapivideoconverter_x11.c
+ libgstvaapi_x11_source_h = gstvaapivideoconverter_x11.h
+ 
+ if USE_X11
++if !USE_GST_API_1_2p
+ libgstvaapi_source_c += $(libgstvaapi_x11_source_c)
+ libgstvaapi_source_h += $(libgstvaapi_x11_source_h)
+ endif
++endif
+ 
+ libgstvaapi_glx_source_c = gstvaapivideoconverter_glx.c
+ libgstvaapi_glx_source_h = gstvaapivideoconverter_glx.h
+ 
+ if USE_GLX
++if !USE_GST_API_1_2p
+ libgstvaapi_source_c += $(libgstvaapi_glx_source_c)
+ libgstvaapi_source_h += $(libgstvaapi_glx_source_h)
+ endif
++endif
++
++libgstvaapi_1_2p_source_c = \
++	gstvaapivideometa_texture.c \
++	$(NULL)
++
++libgstvaapi_1_2p_source_h = \
++	gstvaapivideometa_texture.h \
++	$(NULL)
++
++if USE_GST_API_1_2p
++libgstvaapi_source_c += $(libgstvaapi_1_2p_source_c)
++libgstvaapi_source_h += $(libgstvaapi_1_2p_source_h)
++endif
+ 
+ libgstvaapi_1_0p_source_c = \
+ 	gstvaapivideobufferpool.c \
+@@ -126,6 +148,8 @@ libgstvaapi_la_LIBTOOLFLAGS = --tag=disable-static
+ EXTRA_DIST = \
+ 	$(libgstvaapi_glx_source_c)	\
+ 	$(libgstvaapi_glx_source_h)	\
++	$(libgstvaapi_1_2p_source_c)	\
++	$(libgstvaapi_1_2p_source_h)	\
+ 	$(libgstvaapi_1_0p_source_c)	\
+ 	$(libgstvaapi_1_0p_source_h)	\
+ 	$(libgstvaapi_0_10_source_c)	\
+diff --git a/gst/vaapi/gstvaapi.c b/gst/vaapi/gstvaapi.c
+index 3000b22..7d12a66 100644
+--- a/gst/vaapi/gstvaapi.c
++++ b/gst/vaapi/gstvaapi.c
+@@ -47,9 +47,11 @@ plugin_init (GstPlugin *plugin)
+     gst_element_register(plugin, "vaapidecode",
+                          GST_RANK_PRIMARY,
+                          GST_TYPE_VAAPIDECODE);
++#if !GST_CHECK_VERSION(1,1,0)
+     gst_element_register(plugin, "vaapipostproc",
+                          GST_RANK_PRIMARY,
+                          GST_TYPE_VAAPIPOSTPROC);
++#endif
+     gst_element_register(plugin, "vaapisink",
+                          GST_RANK_PRIMARY,
+                          GST_TYPE_VAAPISINK);
+diff --git a/gst/vaapi/gstvaapidecode.c b/gst/vaapi/gstvaapidecode.c
+index 68cc58f..597a3fb 100644
+--- a/gst/vaapi/gstvaapidecode.c
++++ b/gst/vaapi/gstvaapidecode.c
+@@ -30,11 +30,14 @@
+ 
+ #include "gst/vaapi/sysdeps.h"
+ #include <gst/vaapi/gstvaapidisplay.h>
+-#include <gst/video/videocontext.h>
+ 
+ #include "gstvaapidecode.h"
+ #include "gstvaapipluginutil.h"
++#include "gstvaapivideocontext.h"
+ #include "gstvaapivideobuffer.h"
++#if GST_CHECK_VERSION(1,1,0)
++#include "gstvaapivideometa_texture.h"
++#endif
+ #if GST_CHECK_VERSION(1,0,0)
+ #include "gstvaapivideobufferpool.h"
+ #include "gstvaapivideomemory.h"
+@@ -67,7 +70,15 @@ static const char gst_vaapidecode_sink_caps_str[] =
+     ;
+ 
+ static const char gst_vaapidecode_src_caps_str[] =
++#if GST_CHECK_VERSION(1,1,0)
++    GST_VIDEO_CAPS_MAKE_WITH_FEATURES(
++        GST_CAPS_FEATURE_MEMORY_VAAPI_SURFACE, GST_VIDEO_FORMATS_ALL) ";"
++    GST_VIDEO_CAPS_MAKE_WITH_FEATURES(
++        GST_CAPS_FEATURE_META_GST_VIDEO_GL_TEXTURE_UPLOAD_META,
++        GST_VIDEO_FORMATS_ALL);
++#else
+     GST_VAAPI_SURFACE_CAPS;
++#endif
+ 
+ static GstStaticPadTemplate gst_vaapidecode_sink_factory =
+     GST_STATIC_PAD_TEMPLATE(
+@@ -102,6 +113,7 @@ gst_vaapidecode_implements_iface_init(GstImplementsInterfaceClass *iface)
+ #endif
+ 
+ /* GstVideoContext interface */
++#if !GST_CHECK_VERSION(1,1,0)
+ static void
+ gst_vaapidecode_set_video_context(GstVideoContext *context, const gchar *type,
+     const GValue *value)
+@@ -117,6 +129,8 @@ gst_video_context_interface_init(GstVideoContextInterface *iface)
+ }
+ 
+ #define GstVideoContextClass GstVideoContextInterface
++#endif
++
+ G_DEFINE_TYPE_WITH_CODE(
+     GstVaapiDecode,
+     gst_vaapidecode,
+@@ -125,8 +139,11 @@ G_DEFINE_TYPE_WITH_CODE(
+     G_IMPLEMENT_INTERFACE(GST_TYPE_IMPLEMENTS_INTERFACE,
+                           gst_vaapidecode_implements_iface_init);
+ #endif
++#if !GST_CHECK_VERSION(1,1,0)
+     G_IMPLEMENT_INTERFACE(GST_TYPE_VIDEO_CONTEXT,
+-                          gst_video_context_interface_init))
++                          gst_video_context_interface_init)
++#endif
++    )
+ 
+ static gboolean
+ gst_vaapidecode_update_src_caps(GstVaapiDecode *decode,
+@@ -174,6 +191,9 @@ gst_vaapidecode_update_src_caps(GstVaapiDecode *decode,
+     }
+     gst_video_codec_state_unref(state);
+ 
++#if GST_CHECK_VERSION(1,1,0)
++    state->caps = gst_video_info_to_caps(&vis);
++#else
+     /* XXX: gst_video_info_to_caps() from GStreamer 0.10 does not
+        reconstruct suitable caps for "encoded" video formats */
+     state->caps = gst_caps_from_string(GST_VAAPI_SURFACE_CAPS_NAME);
+@@ -194,6 +214,7 @@ gst_vaapidecode_update_src_caps(GstVaapiDecode *decode,
+             gst_caps_get_structure(state->caps, 0);
+         gst_structure_set_interlaced(structure, TRUE);
+     }
++#endif
+     gst_caps_replace(&decode->srcpad_caps, state->caps);
+     return TRUE;
+ }
+@@ -328,6 +349,11 @@ gst_vaapidecode_push_decoded_frame(GstVideoDecoder *vdec)
+                 crop_meta->height = crop_rect->height;
+             }
+         }
++
++#if GST_CHECK_VERSION(1,1,0)
++        if (decode->has_texture_upload_meta)
++            gst_buffer_add_texture_upload_meta(out_frame->output_buffer);
++#endif
+ #else
+         out_frame->output_buffer =
+             gst_vaapi_video_buffer_new_with_surface_proxy(proxy);
+@@ -514,6 +540,18 @@ gst_vaapidecode_decide_allocation(GstVideoDecoder *vdec, GstQuery *query)
+         gst_buffer_pool_set_config(pool, config);
+     }
+ 
++    decode->has_texture_upload_meta = FALSE;
++    if (gst_query_find_allocation_meta(query, GST_VIDEO_META_API_TYPE, NULL)) {
++        config = gst_buffer_pool_get_config(pool);
++        gst_buffer_pool_config_add_option(config,
++            GST_BUFFER_POOL_OPTION_VIDEO_META);
++        gst_buffer_pool_set_config(pool, config);
++#if GST_CHECK_VERSION(1,1,0)
++        decode->has_texture_upload_meta = gst_query_find_allocation_meta(query,
++            GST_VIDEO_GL_TEXTURE_UPLOAD_META_API_TYPE, NULL);
++#endif
++    }
++
+     if (update_pool)
+         gst_query_set_nth_allocation_pool(query, 0, pool, size, min, max);
+     else
+@@ -536,6 +574,20 @@ error_create_pool:
+ }
+ #endif
+ 
++#if GST_CHECK_VERSION(1,1,0)
++static void
++gst_vaapidecode_set_context(GstElement *element, GstContext *context)
++{
++    GstVaapiDecode * const decode = GST_VAAPIDECODE(element);
++    GstVaapiDisplay *display = NULL;
++
++    if (gst_vaapi_video_context_get_display(context, &display)) {
++        GST_INFO_OBJECT(element, "set display %p", display);
++        gst_vaapi_display_replace(&decode->display, display);
++    }
++}
++#endif
++
+ static inline gboolean
+ gst_vaapidecode_ensure_display(GstVaapiDecode *decode)
+ {
+@@ -607,6 +659,8 @@ gst_vaapidecode_reset_full(GstVaapiDecode *decode, GstCaps *caps, gboolean hard)
+ {
+     GstVaapiCodec codec;
+ 
++    decode->has_texture_upload_meta = FALSE;
++
+     /* Reset timers if hard reset was requested (e.g. seek) */
+     if (hard) {
+         decode->render_time_base = 0;
+@@ -769,6 +823,10 @@ gst_vaapidecode_class_init(GstVaapiDecodeClass *klass)
+         GST_DEBUG_FUNCPTR(gst_vaapidecode_decide_allocation);
+ #endif
+ 
++#if GST_CHECK_VERSION(1,1,0)
++    element_class->set_context = GST_DEBUG_FUNCPTR(gst_vaapidecode_set_context);
++#endif
++
+     gst_element_class_set_static_metadata(element_class,
+         "VA-API decoder",
+         "Codec/Decoder/Video",
+@@ -858,10 +916,12 @@ gst_vaapidecode_query(GST_PAD_QUERY_FUNCTION_ARGS)
+         GST_VAAPIDECODE(gst_pad_get_parent_element(pad));
+     gboolean res;
+ 
+-    GST_DEBUG("sharing display %p", decode->display);
++    GST_INFO_OBJECT(decode, "query type %s", GST_QUERY_TYPE_NAME(query));
+ 
+-    if (gst_vaapi_reply_to_query(query, decode->display))
++    if (gst_vaapi_reply_to_query(query, decode->display)) {
++        GST_DEBUG("sharing display %p", decode->display);
+         res = TRUE;
++    }
+     else if (GST_PAD_IS_SINK(pad)) {
+         switch (GST_QUERY_TYPE(query)) {
+ #if GST_CHECK_VERSION(1,0,0)
+@@ -873,6 +933,24 @@ gst_vaapidecode_query(GST_PAD_QUERY_FUNCTION_ARGS)
+             break;
+         }
+ #endif
++#if GST_CHECK_VERSION(1,1,0)
++        case GST_QUERY_CONTEXT: {
++            const gchar *context_type = NULL;
++
++            if (gst_query_parse_context_type(query, &context_type) &&
++                !g_strcmp0(context_type, GST_VAAPI_DISPLAY_CONTEXT_TYPE_NAME) &&
++                decode->display) {
++                GstContext *context;
++
++                context = gst_vaapi_video_context_new_with_display(
++                    decode->display, FALSE);
++                gst_query_set_context(query, context);
++                gst_context_unref(context);
++                return TRUE;
++            }
++            // fall-through
++        }
++#endif
+         default:
+             res = GST_PAD_QUERY_FUNCTION_CALL(decode->sinkpad_query,
+                 decode->sinkpad, parent, query);
+diff --git a/gst/vaapi/gstvaapidecode.h b/gst/vaapi/gstvaapidecode.h
+index 23991cf..161937b 100644
+--- a/gst/vaapi/gstvaapidecode.h
++++ b/gst/vaapi/gstvaapidecode.h
+@@ -79,6 +79,7 @@ struct _GstVaapiDecode {
+     gint64              render_time_base;
+     GstClockTime        last_buffer_time;
+     guint               current_frame_size;
++    guint               has_texture_upload_meta : 1;
+ };
+ 
+ struct _GstVaapiDecodeClass {
+diff --git a/gst/vaapi/gstvaapipluginutil.c b/gst/vaapi/gstvaapipluginutil.c
+index ac48d01..43b1fc5 100644
+--- a/gst/vaapi/gstvaapipluginutil.c
++++ b/gst/vaapi/gstvaapipluginutil.c
+@@ -22,7 +22,7 @@
+  */
+ 
+ #include "gst/vaapi/sysdeps.h"
+-#include <gst/video/videocontext.h>
++#include "gstvaapivideocontext.h"
+ #if USE_DRM
+ # include <gst/vaapi/gstvaapidisplay_drm.h>
+ #endif
+@@ -130,7 +130,7 @@ gst_vaapi_ensure_display(
+     context = GST_VIDEO_CONTEXT(element);
+     g_return_val_if_fail(context != NULL, FALSE);
+ 
+-    gst_video_context_prepare(context, display_types);
++    gst_vaapi_video_context_prepare(context, display_types);
+ 
+     /* Neighbour found and it updated the display */
+     if (*display_ptr)
+@@ -141,6 +141,8 @@ gst_vaapi_ensure_display(
+ 
+     if (display_ptr)
+         *display_ptr = display;
++
++    gst_vaapi_video_context_propagate(context, display);
+     return display != NULL;
+ }
+ 
+@@ -217,6 +219,9 @@ gst_vaapi_set_display(
+ gboolean
+ gst_vaapi_reply_to_query(GstQuery *query, GstVaapiDisplay *display)
+ {
++#if GST_CHECK_VERSION(1,1,0)
++    return FALSE;
++#else
+     GstVaapiDisplayType display_type;
+     const gchar **types;
+     const gchar *type;
+@@ -305,6 +310,7 @@ gst_vaapi_reply_to_query(GstQuery *query, GstVaapiDisplay *display)
+         }
+     }
+     return res;
++#endif /* !GST_CHECK_VERSION(1,1,0) */
+ }
+ 
+ gboolean
+diff --git a/gst/vaapi/gstvaapisink.c b/gst/vaapi/gstvaapisink.c
+index ae39a51..b6ffca3 100644
+--- a/gst/vaapi/gstvaapisink.c
++++ b/gst/vaapi/gstvaapisink.c
+@@ -32,7 +32,7 @@
+ #include "gst/vaapi/sysdeps.h"
+ #include <gst/gst.h>
+ #include <gst/video/video.h>
+-#include <gst/video/videocontext.h>
++
+ #include <gst/vaapi/gstvaapivalue.h>
+ #if USE_DRM
+ # include <gst/vaapi/gstvaapidisplay_drm.h>
+@@ -69,6 +69,7 @@
+ 
+ #include "gstvaapisink.h"
+ #include "gstvaapipluginutil.h"
++#include "gstvaapivideocontext.h"
+ #include "gstvaapivideometa.h"
+ #if GST_CHECK_VERSION(1,0,0)
+ #include "gstvaapivideobufferpool.h"
+@@ -83,6 +84,13 @@ GST_DEBUG_CATEGORY_STATIC(gst_debug_vaapisink);
+ 
+ /* Default template */
+ static const char gst_vaapisink_sink_caps_str[] =
++#if GST_CHECK_VERSION(1,1,0)
++    GST_VIDEO_CAPS_MAKE_WITH_FEATURES(
++        GST_CAPS_FEATURE_MEMORY_VAAPI_SURFACE, GST_VIDEO_FORMATS_ALL) ";"
++    GST_VIDEO_CAPS_MAKE_WITH_FEATURES(
++        GST_CAPS_FEATURE_META_GST_VIDEO_GL_TEXTURE_UPLOAD_META,
++        GST_VIDEO_FORMATS_ALL);
++#else
+ #if GST_CHECK_VERSION(1,0,0)
+     GST_VIDEO_CAPS_MAKE(GST_VIDEO_FORMATS_ALL) "; "
+ #else
+@@ -91,6 +99,7 @@ static const char gst_vaapisink_sink_caps_str[] =
+     "height = (int) [ 1, MAX ]; "
+ #endif
+     GST_VAAPI_SURFACE_CAPS;
++#endif
+ 
+ static GstStaticPadTemplate gst_vaapisink_sink_factory =
+     GST_STATIC_PAD_TEMPLATE(
+@@ -119,6 +128,7 @@ gst_vaapisink_implements_iface_init(GstImplementsInterfaceClass *iface)
+ #endif
+ 
+ /* GstVideoContext interface */
++#if !GST_CHECK_VERSION(1,1,0)
+ static void
+ gst_vaapisink_set_video_context(GstVideoContext *context, const gchar *type,
+     const GValue *value)
+@@ -132,6 +142,7 @@ gst_vaapisink_video_context_iface_init(GstVideoContextInterface *iface)
+ {
+     iface->set_context = gst_vaapisink_set_video_context;
+ }
++#endif
+ 
+ static void
+ gst_vaapisink_video_overlay_iface_init(GstVideoOverlayInterface *iface);
+@@ -144,8 +155,10 @@ G_DEFINE_TYPE_WITH_CODE(
+     G_IMPLEMENT_INTERFACE(GST_TYPE_IMPLEMENTS_INTERFACE,
+                           gst_vaapisink_implements_iface_init);
+ #endif
++#if !GST_CHECK_VERSION(1,1,0)
+     G_IMPLEMENT_INTERFACE(GST_TYPE_VIDEO_CONTEXT,
+                           gst_vaapisink_video_context_iface_init);
++#endif
+     G_IMPLEMENT_INTERFACE(GST_TYPE_VIDEO_OVERLAY,
+                           gst_vaapisink_video_overlay_iface_init))
+ 
+@@ -714,14 +727,20 @@ gst_vaapisink_get_caps_impl(GstBaseSink *base_sink)
+     GstVaapiSink * const sink = GST_VAAPISINK(base_sink);
+     GstCaps *out_caps, *yuv_caps;
+ 
++#if GST_CHECK_VERSION(1,1,0)
++    out_caps = gst_static_pad_template_get_caps(&gst_vaapisink_sink_factory);
++#else
+     out_caps = gst_caps_from_string(GST_VAAPI_SURFACE_CAPS);
++#endif
+     if (!out_caps)
+         return NULL;
+ 
+     if (gst_vaapisink_ensure_uploader(sink)) {
+         yuv_caps = gst_vaapi_uploader_get_caps(sink->uploader);
+-        if (yuv_caps)
++        if (yuv_caps) {
++            out_caps = gst_caps_make_writable(out_caps);
+             gst_caps_append(out_caps, gst_caps_copy(yuv_caps));
++	}
+     }
+     return out_caps;
+ }
+@@ -1323,15 +1342,55 @@ gst_vaapisink_buffer_alloc(
+ }
+ #endif
+ 
++#if GST_CHECK_VERSION(1,1,0)
++static void
++gst_vaapisink_set_context(GstElement *element, GstContext *context)
++{
++    GstVaapiSink * const sink = GST_VAAPISINK(element);
++    GstVaapiDisplay *display = NULL;
++
++    if (gst_vaapi_video_context_get_display(context, &display)) {
++        GST_INFO_OBJECT(element, "set display %p", display);
++        gst_vaapi_display_replace(&sink->display, display);
++    }
++}
++#endif
++
+ static gboolean
+ gst_vaapisink_query(GstBaseSink *base_sink, GstQuery *query)
+ {
+     GstVaapiSink * const sink = GST_VAAPISINK(base_sink);
+ 
++    GST_INFO_OBJECT(sink, "query type %s", GST_QUERY_TYPE_NAME(query));
++
+     if (gst_vaapi_reply_to_query(query, sink->display)) {
+         GST_DEBUG("sharing display %p", sink->display);
+         return TRUE;
+     }
++
++    switch(GST_QUERY_TYPE(query)) {
++#if GST_CHECK_VERSION(1,1,0)
++      case GST_QUERY_CONTEXT: {
++          const gchar *context_type = NULL;
++
++          if (gst_query_parse_context_type(query, &context_type) &&
++              !g_strcmp0(context_type, GST_VAAPI_DISPLAY_CONTEXT_TYPE_NAME) &&
++              sink->display) {
++              GstContext *context;
++
++              context = gst_vaapi_video_context_new_with_display(
++                  sink->display, FALSE);
++              gst_query_set_context(query, context);
++              gst_context_unref(context);
++              return TRUE;
++          }
++          // fall-through
++      }
++#endif
++      default:
++          break;
++    }
++
+     return GST_BASE_SINK_CLASS(gst_vaapisink_parent_class)->query(base_sink,
+         query);
+ }
+@@ -1448,6 +1507,10 @@ gst_vaapisink_class_init(GstVaapiSinkClass *klass)
+     basesink_class->buffer_alloc = gst_vaapisink_buffer_alloc;
+ #endif
+ 
++#if GST_CHECK_VERSION(1,1,0)
++    element_class->set_context = gst_vaapisink_set_context;
++#endif
++
+     gst_element_class_set_static_metadata(element_class,
+         "VA-API sink",
+         "Sink/Video",
+diff --git a/gst/vaapi/gstvaapivideobuffer.c b/gst/vaapi/gstvaapivideobuffer.c
+index 19926d3..40c11e8 100644
+--- a/gst/vaapi/gstvaapivideobuffer.c
++++ b/gst/vaapi/gstvaapivideobuffer.c
+@@ -27,14 +27,20 @@
+ 
+ #include "gst/vaapi/sysdeps.h"
+ #include "gstvaapivideobuffer.h"
+-#if USE_X11
++#if USE_X11 && !GST_CHECK_VERSION(1,1,0)
+ # include "gstvaapivideoconverter_x11.h"
+ #endif
+-#if USE_GLX
++#if USE_GLX && !GST_CHECK_VERSION(1,1,0)
+ # include "gstvaapivideoconverter_glx.h"
+ #endif
+ 
+-#if GST_CHECK_VERSION(1,0,0)
++#if GST_CHECK_VERSION(1,1,0)
++static inline GstBuffer *
++gst_surface_buffer_new(void)
++{
++    return gst_buffer_new();
++}
++#elif GST_CHECK_VERSION(1,0,0)
+ #include <gst/video/gstsurfacemeta.h>
+ 
+ #define GST_VAAPI_SURFACE_META_CAST(obj) \
+@@ -263,12 +269,12 @@ get_surface_converter(GstVaapiDisplay *display)
+     GFunc func;
+ 
+     switch (gst_vaapi_display_get_display_type(display)) {
+-#if USE_X11
++#if USE_X11 && !GST_CHECK_VERSION(1,1,0)
+     case GST_VAAPI_DISPLAY_TYPE_X11:
+         func = (GFunc)gst_vaapi_video_converter_x11_new;
+         break;
+ #endif
+-#if USE_GLX
++#if USE_GLX && !GST_CHECK_VERSION(1,1,0)
+     case GST_VAAPI_DISPLAY_TYPE_GLX:
+         func = (GFunc)gst_vaapi_video_converter_glx_new;
+         break;
+diff --git a/gst/vaapi/gstvaapivideocontext.c b/gst/vaapi/gstvaapivideocontext.c
+new file mode 100644
+index 0000000..1331d4b
+--- /dev/null
++++ b/gst/vaapi/gstvaapivideocontext.c
+@@ -0,0 +1,163 @@
++/*
++ *  gstvaapivideocontext.c - GStreamer/VA video context
++ *
++ *  Copyright (C) 2010-2011 Splitted-Desktop Systems
++ *  Copyright (C) 2011-2013 Intel Corporation
++ *  Copyright (C) 2013 Igalia
++ *
++ *  This library is free software; you can redistribute it and/or
++ *  modify it under the terms of the GNU Lesser General Public License
++ *  as published by the Free Software Foundation; either version 2.1
++ *  of the License, or (at your option) any later version.
++ *
++ *  This library is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *  Lesser General Public License for more details.
++ *
++ *  You should have received a copy of the GNU Lesser General Public
++ *  License along with this library; if not, write to the Free
++ *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
++ *  Boston, MA 02110-1301 USA
++ */
++
++#include "gst/vaapi/sysdeps.h"
++#include "gstvaapivideocontext.h"
++
++#if GST_CHECK_VERSION(1,1,0)
++
++GST_DEBUG_CATEGORY_STATIC(GST_CAT_CONTEXT);
++
++#define GST_VAAPI_TYPE_DISPLAY \
++    gst_vaapi_display_get_type()
++
++GType
++gst_vaapi_display_get_type(void) G_GNUC_CONST;
++
++G_DEFINE_BOXED_TYPE(GstVaapiDisplay, gst_vaapi_display,
++    (GBoxedCopyFunc)gst_vaapi_display_ref,
++    (GBoxedFreeFunc)gst_vaapi_display_unref)
++
++GstContext *
++gst_vaapi_video_context_new_with_display(GstVaapiDisplay *display,
++    gboolean persistent)
++{
++    GstContext *context;
++    GstStructure *structure;
++
++    context = gst_context_new(GST_VAAPI_DISPLAY_CONTEXT_TYPE_NAME, persistent);
++    structure = gst_context_writable_structure(context);
++    gst_structure_set(structure, "display", GST_VAAPI_TYPE_DISPLAY,
++        display, NULL);
++    return context;
++}
++
++gboolean
++gst_vaapi_video_context_get_display(GstContext *context,
++    GstVaapiDisplay **display_ptr)
++{
++    const GstStructure *structure;
++
++    g_return_val_if_fail(GST_IS_CONTEXT(context), FALSE);
++    g_return_val_if_fail(g_strcmp0(gst_context_get_context_type(context),
++                  GST_VAAPI_DISPLAY_CONTEXT_TYPE_NAME) == 0, FALSE);
++
++    structure = gst_context_get_structure(context);
++    return gst_structure_get(structure, "display", GST_VAAPI_TYPE_DISPLAY,
++        display_ptr, NULL);
++}
++
++static gboolean
++context_pad_query(const GValue *item, GValue *value, gpointer user_data)
++{
++    GstPad * const pad = g_value_get_object(item);
++    GstQuery * const query = user_data;
++
++    if (gst_pad_peer_query(pad, query)) {
++        g_value_set_boolean(value, TRUE);
++        return FALSE;
++    }
++
++    GST_CAT_INFO_OBJECT(GST_CAT_CONTEXT, pad, "context pad peer query failed");
++    return TRUE;
++}
++
++static gboolean
++run_context_query(GstElement *element, GstQuery *query)
++{
++    GstIteratorFoldFunction const func = context_pad_query;
++    GstIterator *it;
++    GValue res = { 0 };
++
++    g_value_init(&res, G_TYPE_BOOLEAN);
++    g_value_set_boolean(&res, FALSE);
++
++    /* Ask downstream neighbour */
++    it = gst_element_iterate_src_pads(element);
++    while (gst_iterator_fold(it, func, &res, query) == GST_ITERATOR_RESYNC)
++        gst_iterator_resync(it);
++    gst_iterator_free(it);
++
++    /* Ignore upstream neighbours */
++    return g_value_get_boolean(&res);
++}
++
++void
++gst_vaapi_video_context_prepare(GstElement *element, const gchar **types)
++{
++    GstContext *context;
++    GstQuery *query;
++
++    if (!GST_CAT_CONTEXT)
++        GST_DEBUG_CATEGORY_GET(GST_CAT_CONTEXT, "GST_CONTEXT");
++
++    /* (2) Query downstream with GST_QUERY_CONTEXT for the context and
++       check if downstream already has a context of the specified type */
++    context = NULL;
++    query = gst_query_new_context(GST_VAAPI_DISPLAY_CONTEXT_TYPE_NAME);
++    if (run_context_query(element, query)) {
++        gst_query_parse_context(query, &context);
++        GST_CAT_INFO_OBJECT(GST_CAT_CONTEXT, element,
++            "found context (%p) in query", context);
++        gst_element_set_context(element, context);
++    }
++    else {
++        /* (3) Post a GST_MESSAGE_NEED_CONTEXT message on the bus with
++           the required context types and afterwards check if a usable
++           context was set now as in (1). The message could be handled
++           by the parent bins of the element and the application */
++        GstMessage *msg;
++
++        GST_CAT_INFO_OBJECT(GST_CAT_CONTEXT, element,
++            "posting `need-context' message");
++        msg = gst_message_new_need_context(GST_OBJECT_CAST(element),
++            GST_VAAPI_DISPLAY_CONTEXT_TYPE_NAME);
++        gst_element_post_message(element, msg);
++    }
++    gst_query_unref(query);
++}
++
++/* (4) Create context by itself and post a GST_MESSAGE_HAVE_CONTEXT
++   message and send a GST_EVENT_CONTEXT event downstream, thus
++   containing the complete context information at this time */
++void
++gst_vaapi_video_context_propagate(GstElement *element, GstVaapiDisplay *display)
++{
++    GstContext *context;
++    GstMessage *msg;
++
++    if (!display) {
++        GST_ERROR_OBJECT(element, "failed to get VA-API display connection");
++        return;
++    }
++
++    context = gst_vaapi_video_context_new_with_display(display, FALSE);
++
++    GST_CAT_INFO_OBJECT(GST_CAT_CONTEXT, element,
++        "posting `have-context' (%p) message with display (%p)",
++        context, display);
++    msg = gst_message_new_have_context(GST_OBJECT_CAST(element), context);
++    gst_element_post_message(GST_ELEMENT_CAST(element), msg);
++}
++
++#endif
+diff --git a/gst/vaapi/gstvaapivideocontext.h b/gst/vaapi/gstvaapivideocontext.h
+new file mode 100644
+index 0000000..3ef5849
+--- /dev/null
++++ b/gst/vaapi/gstvaapivideocontext.h
+@@ -0,0 +1,75 @@
++/*
++ *  gstvaapivideocontext.h - GStreamer/VA video context
++ *
++ *  Copyright (C) 2010-2011 Splitted-Desktop Systems
++ *  Copyright (C) 2011-2013 Intel Corporation
++ *  Copyright (C) 2013 Igalia
++ *
++ *  This library is free software; you can redistribute it and/or
++ *  modify it under the terms of the GNU Lesser General Public License
++ *  as published by the Free Software Foundation; either version 2.1
++ *  of the License, or (at your option) any later version.
++ *
++ *  This library is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *  Lesser General Public License for more details.
++ *
++ *  You should have received a copy of the GNU Lesser General Public
++ *  License along with this library; if not, write to the Free
++ *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
++ *  Boston, MA 02110-1301 USA
++ */
++
++#ifndef GST_VAAPI_VIDEO_CONTEXT_H
++#define GST_VAAPI_VIDEO_CONTEXT_H
++
++#include <gst/vaapi/gstvaapidisplay.h>
++
++#if GST_CHECK_VERSION(1,1,0)
++
++#define GST_VAAPI_DISPLAY_CONTEXT_TYPE_NAME "gst.vaapi.Display"
++
++/* Fake GstVideoContext symbols */
++#define GST_VIDEO_CONTEXT(obj)          (GST_ELEMENT(obj))
++#define GST_IS_VIDEO_CONTEXT(obj)       (GST_IS_ELEMENT(obj))
++#define GstVideoContext                 GstElement
++#define gst_video_context_prepare       gst_vaapi_video_context_prepare
++
++G_GNUC_INTERNAL
++GstContext *
++gst_vaapi_video_context_new_with_display(GstVaapiDisplay *display,
++    gboolean persistent);
++
++G_GNUC_INTERNAL
++gboolean
++gst_vaapi_video_context_get_display(GstContext *context,
++    GstVaapiDisplay **display_ptr);
++
++G_GNUC_INTERNAL
++void
++gst_vaapi_video_context_prepare(GstElement *element, const gchar **types);
++
++G_GNUC_INTERNAL
++void
++gst_vaapi_video_context_propagate(GstElement *element,
++    GstVaapiDisplay *display);
++
++#else
++#include <gst/video/videocontext.h>
++
++static inline void
++gst_vaapi_video_context_prepare(GstVideoContext *context, const gchar **types)
++{
++    gst_video_context_prepare(context, types);
++}
++
++static inline void
++gst_vaapi_video_context_propagate(GstVideoContext *context,
++    GstVaapiDisplay *display)
++{
++}
++
++#endif
++
++#endif /* GST_VAAPI_VIDEO_CONTEXT_H */
+diff --git a/gst/vaapi/gstvaapivideomemory.h b/gst/vaapi/gstvaapivideomemory.h
+index a169930..a82742b 100644
+--- a/gst/vaapi/gstvaapivideomemory.h
++++ b/gst/vaapi/gstvaapivideomemory.h
+@@ -42,6 +42,10 @@ typedef struct _GstVaapiVideoAllocatorClass     GstVaapiVideoAllocatorClass;
+ 
+ #define GST_VAAPI_VIDEO_MEMORY_NAME             "GstVaapiVideoMemory"
+ 
++#if GST_CHECK_VERSION(1,1,0)
++#define GST_CAPS_FEATURE_MEMORY_VAAPI_SURFACE   "memory:VASurface"
++#endif
++
+ /**
+  * GstVaapiVideoMemoryMapType:
+  * @GST_VAAPI_VIDEO_MEMORY_MAP_TYPE_SURFACE: map with gst_buffer_map()
+diff --git a/gst/vaapi/gstvaapivideometa_texture.c b/gst/vaapi/gstvaapivideometa_texture.c
+new file mode 100644
+index 0000000..17b19a0
+--- /dev/null
++++ b/gst/vaapi/gstvaapivideometa_texture.c
+@@ -0,0 +1,92 @@
++/*
++ *  gstvaapivideometa_texture.c - GStreamer/VA video meta (GLTextureUpload)
++ *
++ *  Copyright (C) 2010-2011 Splitted-Desktop Systems
++ *  Copyright (C) 2011-2013 Intel Corporation
++ *  Copyright (C) 2013 Igalia
++ *
++ *  This library is free software; you can redistribute it and/or
++ *  modify it under the terms of the GNU Lesser General Public License
++ *  as published by the Free Software Foundation; either version 2.1
++ *  of the License, or (at your option) any later version.
++ *
++ *  This library is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *  Lesser General Public License for more details.
++ *
++ *  You should have received a copy of the GNU Lesser General Public
++ *  License along with this library; if not, write to the Free
++ *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
++ *  Boston, MA 02110-1301 USA
++ */
++
++#include "gst/vaapi/sysdeps.h"
++#include "gstvaapivideometa.h"
++#include "gstvaapivideometa_texture.h"
++#include "gstvaapipluginutil.h"
++
++#if GST_CHECK_VERSION(1,1,0) && USE_GLX
++static void
++gst_vaapi_texure_upload_free(gpointer data)
++{
++    GstVaapiTexture * const texture = data;
++
++    if (texture)
++        gst_vaapi_texture_unref(texture);
++}
++
++static gboolean
++gst_vaapi_texture_upload(GstVideoGLTextureUploadMeta *meta, guint texture_id[4])
++{
++    GstVaapiVideoMeta * const vmeta =
++        gst_buffer_get_vaapi_video_meta(meta->buffer);
++    GstVaapiTexture *texture = meta->user_data;
++    GstVaapiSurface * const surface = gst_vaapi_video_meta_get_surface(vmeta);
++    GstVaapiDisplay * const dpy =
++        gst_vaapi_object_get_display(GST_VAAPI_OBJECT(surface));
++
++    if (gst_vaapi_display_get_display_type(dpy) != GST_VAAPI_DISPLAY_TYPE_GLX)
++        return FALSE;
++
++    if (texture) {
++        GstVaapiDisplay * const tex_dpy =
++            gst_vaapi_object_get_display(GST_VAAPI_OBJECT(texture));
++        if (tex_dpy != dpy)
++            gst_vaapi_texture_replace(&texture, NULL);
++    }
++
++    if (!texture) {
++        /* FIXME: should we assume target? */
++        texture = gst_vaapi_texture_new_with_texture(dpy, texture_id[0],
++            GL_TEXTURE_2D, GL_RGBA);
++        meta->user_data = texture;
++    }
++
++    if (!gst_vaapi_apply_composition(surface, meta->buffer))
++        GST_WARNING("could not update subtitles");
++
++    return gst_vaapi_texture_put_surface(texture, surface,
++        gst_vaapi_video_meta_get_render_flags(vmeta));
++}
++#endif
++
++#if GST_CHECK_VERSION(1,1,0)
++gboolean
++gst_buffer_add_texture_upload_meta(GstBuffer *buffer)
++{
++    GstVideoGLTextureUploadMeta *meta = NULL;
++    GstVideoGLTextureType tex_type[] = { GST_VIDEO_GL_TEXTURE_TYPE_RGBA };
++
++    if (!buffer)
++        return FALSE;
++
++#if USE_GLX
++    meta = gst_buffer_add_video_gl_texture_upload_meta(buffer,
++        GST_VIDEO_GL_TEXTURE_ORIENTATION_X_NORMAL_Y_NORMAL,
++        1, tex_type, gst_vaapi_texture_upload,
++        NULL, NULL, gst_vaapi_texure_upload_free);
++#endif
++    return meta != NULL;
++}
++#endif
+diff --git a/gst/vaapi/gstvaapivideometa_texture.h b/gst/vaapi/gstvaapivideometa_texture.h
+new file mode 100644
+index 0000000..2f95434
+--- /dev/null
++++ b/gst/vaapi/gstvaapivideometa_texture.h
+@@ -0,0 +1,37 @@
++/*
++ *  gstvaapivideometa_texture.h - GStreamer/VA video meta (GLTextureUpload)
++ *
++ *  Copyright (C) 2010-2011 Splitted-Desktop Systems
++ *  Copyright (C) 2011-2013 Intel Corporation
++ *  Copyright (C) 2013 Igalia
++ *
++ *  This library is free software; you can redistribute it and/or
++ *  modify it under the terms of the GNU Lesser General Public License
++ *  as published by the Free Software Foundation; either version 2.1
++ *  of the License, or (at your option) any later version.
++ *
++ *  This library is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ *  Lesser General Public License for more details.
++ *
++ *  You should have received a copy of the GNU Lesser General Public
++ *  License along with this library; if not, write to the Free
++ *  Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
++ *  Boston, MA 02110-1301 USA
++ */
++
++#ifndef GST_VAAPI_VIDEO_META_TEXTURE_H
++#define GST_VAAPI_VIDEO_META_TEXTURE_H
++
++#include <gst/vaapi/gstvaapitexture.h>
++
++G_BEGIN_DECLS
++
++G_GNUC_INTERNAL
++gboolean
++gst_buffer_add_texture_upload_meta(GstBuffer *buffer);
++
++G_END_DECLS
++
++#endif /* GST_VAAPI_VIDEO_META_TEXTURE_H */
+diff --git a/tests/simple-decoder.c b/tests/simple-decoder.c
+index 5b50c87..3c434d0 100644
+--- a/tests/simple-decoder.c
++++ b/tests/simple-decoder.c
+@@ -498,7 +498,7 @@ renderer_process(App *app, RenderFrame *rfp)
+     ensure_window_size(app, surface);
+ 
+     crop_rect = gst_vaapi_surface_proxy_get_crop_rect(rfp->proxy);
+-    if (!ensure_pixmaps(app, surface, crop_rect))
++    if (g_use_pixmap && !ensure_pixmaps(app, surface, crop_rect))
+         SEND_ERROR("failed to create intermediate pixmaps");
+ 
+     if (!gst_vaapi_surface_sync(surface))
