@@ -7,12 +7,12 @@
 Summary:	GStreamer plugin to support Video Acceleration API
 Summary(pl.UTF-8):	Wtyczka GStreamera obsługująca Video Acceleration API
 Name:		gstreamer-vaapi
-Version:	0.5.9
+Version:	0.5.10
 Release:	1
 License:	LGPL v2.1+
 Group:		Libraries
 Source0:	http://www.freedesktop.org/software/vaapi/releases/gstreamer-vaapi/%{name}-%{version}.tar.bz2
-# Source0-md5:	d213d22affbb2d65ebf6107fec69999b
+# Source0-md5:	3bd90b696b644be943450ba0c1497193
 URL:		http://www.freedesktop.org/wiki/Software/vaapi/
 BuildRequires:	Mesa-libGL-devel
 BuildRequires:	autoconf >= 2.66
@@ -127,15 +127,15 @@ rm -rf $RPM_BUILD_ROOT
 %attr(755,root,root) %{_libdir}/libgstcodecparsers_vpx.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/libgstcodecparsers_vpx.so.0
 %attr(755,root,root) %{_libdir}/libgstvaapi-%{gstapi}.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-%{gstapi}.so.0
+%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-%{gstapi}.so.1
 %attr(755,root,root) %{_libdir}/libgstvaapi-drm-%{gstapi}.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-drm-%{gstapi}.so.0
+%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-drm-%{gstapi}.so.1
 %attr(755,root,root) %{_libdir}/libgstvaapi-glx-%{gstapi}.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-glx-%{gstapi}.so.0
+%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-glx-%{gstapi}.so.1
 %attr(755,root,root) %{_libdir}/libgstvaapi-wayland-%{gstapi}.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-wayland-%{gstapi}.so.0
+%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-wayland-%{gstapi}.so.1
 %attr(755,root,root) %{_libdir}/libgstvaapi-x11-%{gstapi}.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-x11-%{gstapi}.so.0
+%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-x11-%{gstapi}.so.1
 %attr(755,root,root) %{_libdir}/gstreamer-1.0/libgstvaapi.so
 %attr(755,root,root) %{_libdir}/gstreamer-1.0/libgstvaapi_parse.so
 
