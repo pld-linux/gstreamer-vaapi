@@ -7,17 +7,20 @@
 Summary:	GStreamer plugin to support Video Acceleration API
 Summary(pl.UTF-8):	Wtyczka GStreamera obsługująca Video Acceleration API
 Name:		gstreamer-vaapi
-Version:	0.5.10
+Version:	0.6.0
 Release:	1
 License:	LGPL v2.1+
 Group:		Libraries
 Source0:	http://www.freedesktop.org/software/vaapi/releases/gstreamer-vaapi/%{name}-%{version}.tar.bz2
-# Source0-md5:	3bd90b696b644be943450ba0c1497193
+# Source0-md5:	c8d8ba19d7d18d9e7bd455f73bb5daf2
+Patch0:		%{name}-link.patch
 URL:		http://www.freedesktop.org/wiki/Software/vaapi/
+BuildRequires:	Mesa-libEGL-devel
 BuildRequires:	Mesa-libGL-devel
+BuildRequires:	Mesa-libGLES-devel
 BuildRequires:	autoconf >= 2.66
 BuildRequires:	automake >= 1:1.11
-BuildRequires:	glib2-devel >= 1:2.28.0
+BuildRequires:	glib2-devel >= 1:2.32.0
 BuildRequires:	gstreamer-devel >= 1.4.0
 BuildRequires:	gstreamer-plugins-bad-devel >= 1.4.0
 BuildRequires:	gstreamer-plugins-base-devel >= 1.4.0
@@ -41,7 +44,7 @@ BuildRequires:	wayland-devel >= 1.0.0
 BuildRequires:	xorg-lib-libX11-devel
 BuildRequires:	xorg-lib-libXrandr-devel
 BuildRequires:	xorg-lib-libXrender-devel
-Requires:	glib2 >= 1:2.28.0
+Requires:	glib2 >= 1:2.32.0
 Requires:	gstreamer >= 1.0.0
 Requires:	gstreamer-plugins-bad >= 1.4.0
 Requires:	gstreamer-plugins-base >= 1.4.0
@@ -90,6 +93,7 @@ Statyczne biblioteki VA-API GStreamera.
 
 %prep
 %setup -q
+%patch0 -p1
 
 %build
 %{__libtoolize}
@@ -127,15 +131,17 @@ rm -rf $RPM_BUILD_ROOT
 %attr(755,root,root) %{_libdir}/libgstcodecparsers_vpx.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/libgstcodecparsers_vpx.so.0
 %attr(755,root,root) %{_libdir}/libgstvaapi-%{gstapi}.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-%{gstapi}.so.1
+%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-%{gstapi}.so.2
 %attr(755,root,root) %{_libdir}/libgstvaapi-drm-%{gstapi}.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-drm-%{gstapi}.so.1
+%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-drm-%{gstapi}.so.2
+%attr(755,root,root) %{_libdir}/libgstvaapi-egl-%{gstapi}.so.*.*.*
+%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-egl-%{gstapi}.so.2
 %attr(755,root,root) %{_libdir}/libgstvaapi-glx-%{gstapi}.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-glx-%{gstapi}.so.1
+%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-glx-%{gstapi}.so.2
 %attr(755,root,root) %{_libdir}/libgstvaapi-wayland-%{gstapi}.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-wayland-%{gstapi}.so.1
+%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-wayland-%{gstapi}.so.2
 %attr(755,root,root) %{_libdir}/libgstvaapi-x11-%{gstapi}.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-x11-%{gstapi}.so.1
+%attr(755,root,root) %ghost %{_libdir}/libgstvaapi-x11-%{gstapi}.so.2
 %attr(755,root,root) %{_libdir}/gstreamer-1.0/libgstvaapi.so
 %attr(755,root,root) %{_libdir}/gstreamer-1.0/libgstvaapi_parse.so
 
@@ -144,6 +150,7 @@ rm -rf $RPM_BUILD_ROOT
 %attr(755,root,root) %{_libdir}/libgstcodecparsers_vpx.so
 %attr(755,root,root) %{_libdir}/libgstvaapi-%{gstapi}.so
 %attr(755,root,root) %{_libdir}/libgstvaapi-drm-%{gstapi}.so
+%attr(755,root,root) %{_libdir}/libgstvaapi-egl-%{gstapi}.so
 %attr(755,root,root) %{_libdir}/libgstvaapi-glx-%{gstapi}.so
 %attr(755,root,root) %{_libdir}/libgstvaapi-wayland-%{gstapi}.so
 %attr(755,root,root) %{_libdir}/libgstvaapi-x11-%{gstapi}.so
@@ -160,6 +167,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libgstcodecparsers_vpx.a
 %{_libdir}/libgstvaapi-%{gstapi}.a
 %{_libdir}/libgstvaapi-drm-%{gstapi}.a
+%{_libdir}/libgstvaapi-egl-%{gstapi}.a
 %{_libdir}/libgstvaapi-glx-%{gstapi}.a
 %{_libdir}/libgstvaapi-wayland-%{gstapi}.a
 %{_libdir}/libgstvaapi-x11-%{gstapi}.a
