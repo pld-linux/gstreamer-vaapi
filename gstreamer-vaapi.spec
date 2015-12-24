@@ -112,7 +112,8 @@ Statyczne biblioteki VA-API GStreamera.
 %install
 rm -rf $RPM_BUILD_ROOT
 
-%{__make} install \
+# race: gstvaapitexture.h is installed by more than one install target
+%{__make} -j1 install \
 	DESTDIR=$RPM_BUILD_ROOT
 
 # gstreamer module
