@@ -4,19 +4,19 @@
 %bcond_with	api		# GST VA-API libraries API [no longer exported as of 1.6.0]
 #
 %define		gstapi	1.6
-%define		gst_ver		1.6.3
-%define		gstpb_ver	1.6.3
-%define		gstpd_ver	1.6.3
+%define		gst_ver		1.8.0
+%define		gstpb_ver	1.8.0
+%define		gstpd_ver	1.8.0
 Summary:	GStreamer plugin to support Video Acceleration API
 Summary(pl.UTF-8):	Wtyczka GStreamera obsługująca Video Acceleration API
 Name:		gstreamer-vaapi
-Version:	1.6.0
+Version:	1.8.1
 Release:	1
 License:	LGPL v2.1+
 Group:		Libraries
 Source0:	https://gstreamer.freedesktop.org/src/gstreamer-vaapi/%{name}-%{version}.tar.xz
-# Source0-md5:	68ea4014d79b41d01de00aa83b8df49c
-URL:		http://www.freedesktop.org/wiki/Software/vaapi/
+# Source0-md5:	fbd2b307e6c007c44b65694f88bd8f16
+URL:		https://gstreamer.freedesktop.org/
 BuildRequires:	Mesa-libEGL-devel
 BuildRequires:	Mesa-libGL-devel
 BuildRequires:	Mesa-libGLES-devel
