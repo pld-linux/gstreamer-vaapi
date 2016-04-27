@@ -2,7 +2,7 @@
 # Conditional build:
 %bcond_without	static_libs	# static libraries
 %bcond_with	api		# GST VA-API libraries API [no longer exported as of 1.6.0]
-#
+
 %define		gstapi	1.6
 %define		gst_ver		1.8.0
 %define		gstpb_ver	1.8.0
@@ -11,7 +11,7 @@ Summary:	GStreamer plugin to support Video Acceleration API
 Summary(pl.UTF-8):	Wtyczka GStreamera obsługująca Video Acceleration API
 Name:		gstreamer-vaapi
 Version:	1.8.1
-Release:	1
+Release:	2
 License:	LGPL v2.1+
 Group:		Libraries
 Source0:	https://gstreamer.freedesktop.org/src/gstreamer-vaapi/%{name}-%{version}.tar.xz
@@ -56,8 +56,8 @@ Requires:	gstreamer-plugins-base >= %{gstpb_ver}
 Requires:	libva >= 1.6.0
 Requires:	wayland >= 1.0.0
 %if %{without api}
-Obsoletes:	%{name}-devel < %{version}
-Obsoletes:	%{name}-static < %{version}
+Obsoletes:	gstreamer-vaapi-devel < %{version}
+Obsoletes:	gstreamer-vaapi-static < %{version}
 %endif
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
@@ -103,6 +103,9 @@ Statyczne biblioteki VA-API GStreamera.
 Summary:	GStreamer VA-API plugins documentation
 Summary(pl.UTF-8):	Dokumentacja do wtyczek GStreamera VA-API
 Group:		Documentation
+%if "%{_rpmversion}" >= "5"
+BuildArch:	noarch
+%endif
 
 %description apidocs
 GStreamer VA-API plugins documentation.
