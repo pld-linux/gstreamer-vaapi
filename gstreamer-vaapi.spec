@@ -4,9 +4,9 @@
 %bcond_with	api		# GST VA-API libraries API [no longer exported as of 1.6.0]
 
 %define		gstapi	1.6
-%define		gst_ver		1.14.0
-%define		gstpb_ver	1.14.0
-%define		gstpd_ver	1.14.0
+%define		gst_ver		1.14.4
+%define		gstpb_ver	1.14.4
+%define		gstpd_ver	1.14.4
 Summary:	GStreamer plugin to support Video Acceleration API
 Summary(pl.UTF-8):	Wtyczka GStreamera obsługująca Video Acceleration API
 Name:		gstreamer-vaapi
@@ -24,7 +24,8 @@ BuildRequires:	autoconf >= 2.69
 BuildRequires:	automake >= 1:1.14
 BuildRequires:	glib2-devel >= 1:2.32.0
 BuildRequires:	gstreamer-devel >= %{gst_ver}
-# gstreamer-gl (optional), gstreamer-codecparsers
+BuildRequires:	gstreamer-gl-devel >= %{gstpb_ver}
+# gstreamer-codecparsers
 BuildRequires:	gstreamer-plugins-bad-devel >= %{gstpd_ver}
 BuildRequires:	gstreamer-plugins-base-devel >= %{gstpb_ver}
 BuildRequires:	gtk-doc >= 1.12
@@ -53,6 +54,7 @@ BuildRequires:	yasm
 %endif
 Requires:	glib2 >= 1:2.32.0
 Requires:	gstreamer >= %{gst_ver}
+Requires:	gstreamer-gl-libs >= %{gstpb_ver}
 Requires:	gstreamer-plugins-bad >= %{gstpd_ver}
 Requires:	gstreamer-plugins-base >= %{gstpb_ver}
 Requires:	libva >= 1.6.0
