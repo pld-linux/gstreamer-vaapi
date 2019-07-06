@@ -3,7 +3,7 @@
 %bcond_without	static_libs	# static libraries
 %bcond_with	api		# GST VA-API libraries API [no longer exported as of 1.6.0]
 
-%define		gstapi	1.6
+%define		gstapi		1.6
 %define		gst_ver		1.16.0
 %define		gstpb_ver	1.16.0
 %define		gstpd_ver	1.16.0
@@ -22,7 +22,7 @@ BuildRequires:	Mesa-libGL-devel
 BuildRequires:	Mesa-libGLES-devel
 BuildRequires:	autoconf >= 2.69
 BuildRequires:	automake >= 1:1.14
-BuildRequires:	glib2-devel >= 1:2.32.0
+BuildRequires:	glib2-devel >= 1:2.40.0
 BuildRequires:	gstreamer-devel >= %{gst_ver}
 BuildRequires:	gstreamer-gl-devel >= %{gstpb_ver}
 # gstreamer-codecparsers
@@ -37,12 +37,13 @@ BuildRequires:	libva-wayland-devel >= 1.1.0
 BuildRequires:	libva-x11-devel >= 1.0.3
 BuildRequires:	pkgconfig
 # libva API versions
-BuildRequires:	pkgconfig(libva) >= 0.38.0
-BuildRequires:	pkgconfig(libva-drm) >= 0.33.0
-BuildRequires:	pkgconfig(libva-wayland) >= 0.33.0
-BuildRequires:	pkgconfig(libva-x11) >= 0.31.0
+BuildRequires:	pkgconfig(libva) >= 0.39.0
+BuildRequires:	pkgconfig(libva-drm) >= 0.39.0
+BuildRequires:	pkgconfig(libva-wayland) >= 0.39.0
+BuildRequires:	pkgconfig(libva-x11) >= 0.39.0
 BuildRequires:	udev-devel
-BuildRequires:	wayland-devel >= 1.0.2
+BuildRequires:	wayland-devel >= 1.11.0
+BuildRequires:	wayland-protocols >= 1.15
 BuildRequires:	tar >= 1:1.22
 BuildRequires:	udev-devel
 BuildRequires:	xorg-lib-libX11-devel
@@ -52,13 +53,13 @@ BuildRequires:	xz
 %ifarch %{ix86} %{x8664} x32
 BuildRequires:	yasm
 %endif
-Requires:	glib2 >= 1:2.32.0
+Requires:	glib2 >= 1:2.40.0
 Requires:	gstreamer >= %{gst_ver}
 Requires:	gstreamer-gl-libs >= %{gstpb_ver}
 Requires:	gstreamer-plugins-bad >= %{gstpd_ver}
 Requires:	gstreamer-plugins-base >= %{gstpb_ver}
 Requires:	libva >= 1.6.0
-Requires:	wayland >= 1.0.0
+Requires:	wayland >= 1.11.0
 %if %{without api}
 Obsoletes:	gstreamer-vaapi-devel < %{version}
 Obsoletes:	gstreamer-vaapi-static < %{version}
