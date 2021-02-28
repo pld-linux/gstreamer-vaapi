@@ -108,9 +108,7 @@ Statyczne biblioteki VA-API GStreamera.
 Summary:	GStreamer VA-API plugins documentation
 Summary(pl.UTF-8):	Dokumentacja do wtyczek GStreamera VA-API
 Group:		Documentation
-%if "%{_rpmversion}" >= "5"
 BuildArch:	noarch
-%endif
 
 %description apidocs
 GStreamer VA-API plugins documentation.
