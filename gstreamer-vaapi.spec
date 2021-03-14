@@ -4,18 +4,18 @@
 %bcond_with	api		# GST VA-API libraries API [no longer exported as of 1.6.0]
 
 %define		gstapi		1.6
-%define		gst_ver		1.16.2
-%define		gstpb_ver	1.16.2
-%define		gstpd_ver	1.16.2
+%define		gst_ver		1.16.3
+%define		gstpb_ver	1.16.3
+%define		gstpd_ver	1.16.3
 Summary:	GStreamer plugin to support Video Acceleration API
 Summary(pl.UTF-8):	Wtyczka GStreamera obsługująca Video Acceleration API
 Name:		gstreamer-vaapi
-Version:	1.16.2
+Version:	1.16.3
 Release:	1
 License:	LGPL v2.1+
 Group:		Libraries
 Source0:	https://gstreamer.freedesktop.org/src/gstreamer-vaapi/%{name}-%{version}.tar.xz
-# Source0-md5:	13f7cb6a64bde24e67f563377487dcce
+# Source0-md5:	8c9b5a4d20afc04bc5e1536e81511f27
 URL:		https://gstreamer.freedesktop.org/
 BuildRequires:	Mesa-libEGL-devel
 BuildRequires:	Mesa-libGL-devel
@@ -41,11 +41,11 @@ BuildRequires:	pkgconfig(libva) >= 0.39.0
 BuildRequires:	pkgconfig(libva-drm) >= 0.39.0
 BuildRequires:	pkgconfig(libva-wayland) >= 0.39.0
 BuildRequires:	pkgconfig(libva-x11) >= 0.39.0
+BuildRequires:	rpm-build >= 4.6
+BuildRequires:	tar >= 1:1.22
 BuildRequires:	udev-devel
 BuildRequires:	wayland-devel >= 1.11.0
 BuildRequires:	wayland-protocols >= 1.15
-BuildRequires:	tar >= 1:1.22
-BuildRequires:	udev-devel
 BuildRequires:	xorg-lib-libX11-devel
 BuildRequires:	xorg-lib-libXrandr-devel
 BuildRequires:	xorg-lib-libXrender-devel
