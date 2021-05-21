@@ -17,9 +17,11 @@ Group:		Libraries
 Source0:	https://gstreamer.freedesktop.org/src/gstreamer-vaapi/%{name}-%{version}.tar.xz
 # Source0-md5:	8c9b5a4d20afc04bc5e1536e81511f27
 URL:		https://gstreamer.freedesktop.org/
-BuildRequires:	Mesa-libEGL-devel
-BuildRequires:	Mesa-libGL-devel
-BuildRequires:	Mesa-libGLES-devel
+BuildRequires:	EGL-devel
+BuildRequires:	OpenGL-devel
+BuildRequires:	OpenGL-GLX-devel
+BuildRequires:	OpenGLESv2-devel
+BuildRequires:	OpenGLESv3-devel
 BuildRequires:	autoconf >= 2.69
 BuildRequires:	automake >= 1:1.14
 BuildRequires:	glib2-devel >= 1:2.40.0
@@ -36,6 +38,10 @@ BuildRequires:	libva-drm-devel >= 1.1.0
 BuildRequires:	libva-wayland-devel >= 1.1.0
 BuildRequires:	libva-x11-devel >= 1.0.3
 BuildRequires:	pkgconfig
+BuildRequires:	pkgconfig(egl)
+BuildRequires:	pkgconfig(gl)
+BuildRequires:	pkgconfig(glesv2)
+BuildRequires:	pkgconfig(glesv3)
 # libva API versions
 BuildRequires:	pkgconfig(libva) >= 0.39.0
 BuildRequires:	pkgconfig(libva-drm) >= 0.39.0
