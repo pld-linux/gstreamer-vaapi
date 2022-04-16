@@ -4,18 +4,18 @@
 %bcond_with	api		# GST VA-API libraries API [no longer exported as of 1.6.0]
 
 %define		gstapi		1.6
-%define		gst_ver		1.19.3
-%define		gstpb_ver	1.19.3
-%define		gstpd_ver	1.19.3
+%define		gst_ver		1.20.0
+%define		gstpb_ver	1.20.0
+%define		gstpd_ver	1.20.0
 Summary:	GStreamer plugin to support Video Acceleration API
 Summary(pl.UTF-8):	Wtyczka GStreamera obsługująca Video Acceleration API
 Name:		gstreamer-vaapi
-Version:	1.19.3
+Version:	1.20.1
 Release:	1
 License:	LGPL v2.1+
 Group:		Libraries
 Source0:	https://gstreamer.freedesktop.org/src/gstreamer-vaapi/%{name}-%{version}.tar.xz
-# Source0-md5:	9f876a6b01b8e810bf07f9b52e03055d
+# Source0-md5:	7520beb302a0b77f6ecc1cef1d2a3382
 URL:		https://gstreamer.freedesktop.org/
 BuildRequires:	EGL-devel
 BuildRequires:	OpenGL-devel
@@ -34,7 +34,7 @@ BuildRequires:	libva-devel >= 1.6.0
 BuildRequires:	libva-drm-devel >= 1.1.0
 BuildRequires:	libva-wayland-devel >= 1.1.0
 BuildRequires:	libva-x11-devel >= 1.0.3
-BuildRequires:	meson >= 0.48.0
+BuildRequires:	meson >= 0.59
 BuildRequires:	ninja >= 1.5
 BuildRequires:	pkgconfig
 BuildRequires:	pkgconfig(egl)
@@ -53,7 +53,6 @@ BuildRequires:	wayland-devel >= 1.11.0
 BuildRequires:	wayland-protocols >= 1.15
 BuildRequires:	xorg-lib-libX11-devel
 BuildRequires:	xorg-lib-libXrandr-devel
-BuildRequires:	xorg-lib-libXrender-devel
 BuildRequires:	xz
 %ifarch %{ix86} %{x8664} x32
 BuildRequires:	yasm
@@ -146,7 +145,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(644,root,root,755)
-%doc AUTHORS NEWS README
+%doc AUTHORS NEWS README RELEASE
 %if %{with api}
 %attr(755,root,root) %{_libdir}/libgstcodecparsers_vpx.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/libgstcodecparsers_vpx.so.0
