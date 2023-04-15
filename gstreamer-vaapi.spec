@@ -4,18 +4,18 @@
 %bcond_with	api		# GST VA-API libraries API [no longer exported as of 1.6.0]
 
 %define		gstapi		1.6
-%define		gst_ver		1.20.0
-%define		gstpb_ver	1.20.0
-%define		gstpd_ver	1.20.0
+%define		gst_ver		1.22.0
+%define		gstpb_ver	1.22.0
+%define		gstpd_ver	1.22.0
 Summary:	GStreamer plugin to support Video Acceleration API
 Summary(pl.UTF-8):	Wtyczka GStreamera obsługująca Video Acceleration API
 Name:		gstreamer-vaapi
-Version:	1.20.5
+Version:	1.22.2
 Release:	1
 License:	LGPL v2.1+
 Group:		Libraries
 Source0:	https://gstreamer.freedesktop.org/src/gstreamer-vaapi/%{name}-%{version}.tar.xz
-# Source0-md5:	5d3b1840a6c0a27f3f3e75bfdec9d0b4
+# Source0-md5:	e9a0d5827aabca2017357431fe0d8230
 URL:		https://gstreamer.freedesktop.org/
 BuildRequires:	EGL-devel
 BuildRequires:	OpenGL-devel
@@ -30,18 +30,18 @@ BuildRequires:	gstreamer-plugins-bad-devel >= %{gstpd_ver}
 BuildRequires:	gstreamer-plugins-base-devel >= %{gstpb_ver}
 %{?with_apidocs:BuildRequires:	hotdoc >= 0.11.0}
 BuildRequires:	libdrm-devel >= 2.4.98
-BuildRequires:	libva-devel >= 1.6.0
+BuildRequires:	libva-devel >= 1.10.0
 BuildRequires:	libva-drm-devel >= 1.1.0
 BuildRequires:	libva-wayland-devel >= 1.1.0
 BuildRequires:	libva-x11-devel >= 1.0.3
-BuildRequires:	meson >= 0.59
+BuildRequires:	meson >= 0.62
 BuildRequires:	ninja >= 1.5
 BuildRequires:	pkgconfig
 BuildRequires:	pkgconfig(egl)
 BuildRequires:	pkgconfig(gl)
 BuildRequires:	pkgconfig(glesv2)
 # libva API versions
-BuildRequires:	pkgconfig(libva) >= 0.39.0
+BuildRequires:	pkgconfig(libva) >= 1.10
 BuildRequires:	pkgconfig(libva-drm) >= 0.39.0
 BuildRequires:	pkgconfig(libva-wayland) >= 0.39.0
 BuildRequires:	pkgconfig(libva-x11) >= 0.39.0
@@ -63,7 +63,7 @@ Requires:	gstreamer-gl-libs >= %{gstpb_ver}
 Requires:	gstreamer-plugins-bad >= %{gstpd_ver}
 Requires:	gstreamer-plugins-base >= %{gstpb_ver}
 Requires:	libdrm >= 2.4.98
-Requires:	libva >= 1.6.0
+Requires:	libva >= 1.10.0
 Requires:	wayland >= 1.11.0
 %if %{without api}
 Obsoletes:	gstreamer-vaapi-devel < %{version}
@@ -86,7 +86,7 @@ Group:		Development/Libraries
 Requires:	%{name} = %{version}-%{release}
 Requires:	gstreamer-devel >= %{gst_ver}
 Requires:	gstreamer-plugins-base-devel >= %{gstpb_ver}
-Requires:	libva-devel >= 1.6.0
+Requires:	libva-devel >= 1.10.0
 Requires:	libva-drm-devel >= 1.1.0
 Requires:	libva-wayland-devel >= 1.1.0
 Requires:	libva-x11-devel >= 1.0.3
