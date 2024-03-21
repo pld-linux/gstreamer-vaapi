@@ -4,25 +4,25 @@
 %bcond_with	api		# GST VA-API libraries API [no longer exported as of 1.6.0]
 
 %define		gstapi		1.6
-%define		gst_ver		1.22.0
-%define		gstpb_ver	1.22.0
-%define		gstpd_ver	1.22.0
+%define		gst_ver		1.24.0
+%define		gstpb_ver	1.24.0
+%define		gstpd_ver	1.24.0
 Summary:	GStreamer plugin to support Video Acceleration API
 Summary(pl.UTF-8):	Wtyczka GStreamera obsługująca Video Acceleration API
 Name:		gstreamer-vaapi
-Version:	1.22.6
+Version:	1.24.0
 Release:	1
 License:	LGPL v2.1+
 Group:		Libraries
 Source0:	https://gstreamer.freedesktop.org/src/gstreamer-vaapi/%{name}-%{version}.tar.xz
-# Source0-md5:	db2abc52c4c6e2539d6398c44aa3c0ad
+# Source0-md5:	8843075db228ace9ee692a9a45a991e7
 URL:		https://gstreamer.freedesktop.org/
 BuildRequires:	EGL-devel
 BuildRequires:	OpenGL-devel
 BuildRequires:	OpenGL-GLX-devel
 BuildRequires:	OpenGLESv2-devel
 BuildRequires:	OpenGLESv3-devel
-BuildRequires:	glib2-devel >= 1:2.44.0
+BuildRequires:	glib2-devel >= 1:2.67.4
 BuildRequires:	gstreamer-devel >= %{gst_ver}
 BuildRequires:	gstreamer-gl-devel >= %{gstpb_ver}
 # gstreamer-codecparsers
@@ -34,7 +34,7 @@ BuildRequires:	libva-devel >= 1.10.0
 BuildRequires:	libva-drm-devel >= 1.1.0
 BuildRequires:	libva-wayland-devel >= 1.1.0
 BuildRequires:	libva-x11-devel >= 1.0.3
-BuildRequires:	meson >= 0.62
+BuildRequires:	meson >= 1.1
 BuildRequires:	ninja >= 1.5
 BuildRequires:	pkgconfig
 BuildRequires:	pkgconfig(egl)
@@ -57,7 +57,7 @@ BuildRequires:	xz
 %ifarch %{ix86} %{x8664} x32
 BuildRequires:	yasm
 %endif
-Requires:	glib2 >= 1:2.44.0
+Requires:	glib2 >= 1:2.67.4
 Requires:	gstreamer >= %{gst_ver}
 Requires:	gstreamer-gl-libs >= %{gstpb_ver}
 Requires:	gstreamer-plugins-bad >= %{gstpd_ver}
