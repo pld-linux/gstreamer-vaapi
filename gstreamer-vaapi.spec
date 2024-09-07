@@ -10,12 +10,12 @@
 Summary:	GStreamer plugin to support Video Acceleration API
 Summary(pl.UTF-8):	Wtyczka GStreamera obsługująca Video Acceleration API
 Name:		gstreamer-vaapi
-Version:	1.24.4
+Version:	1.24.7
 Release:	1
 License:	LGPL v2.1+
 Group:		Libraries
 Source0:	https://gstreamer.freedesktop.org/src/gstreamer-vaapi/%{name}-%{version}.tar.xz
-# Source0-md5:	d51a2515332dafe6fd6a5f1b2753983c
+# Source0-md5:	6ac050d269db69e80c78f30806d8de15
 URL:		https://gstreamer.freedesktop.org/
 BuildRequires:	EGL-devel
 BuildRequires:	OpenGL-devel
