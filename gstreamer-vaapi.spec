@@ -10,12 +10,12 @@
 Summary:	GStreamer plugin to support Video Acceleration API
 Summary(pl.UTF-8):	Wtyczka GStreamera obsługująca Video Acceleration API
 Name:		gstreamer-vaapi
-Version:	1.24.8
+Version:	1.24.12
 Release:	1
 License:	LGPL v2.1+
 Group:		Libraries
 Source0:	https://gstreamer.freedesktop.org/src/gstreamer-vaapi/%{name}-%{version}.tar.xz
-# Source0-md5:	cca504db51d4fa472fe6b5163d7eade7
+# Source0-md5:	8a285143aff48ca5f015fe422afbed77
 URL:		https://gstreamer.freedesktop.org/
 BuildRequires:	EGL-devel
 BuildRequires:	OpenGL-devel
@@ -46,7 +46,7 @@ BuildRequires:	pkgconfig(libva-drm) >= 0.39.0
 BuildRequires:	pkgconfig(libva-wayland) >= 0.39.0
 BuildRequires:	pkgconfig(libva-x11) >= 0.39.0
 BuildRequires:	rpm-build >= 4.6
-BuildRequires:	rpmbuild(macros) >= 1.736
+BuildRequires:	rpmbuild(macros) >= 2.042
 BuildRequires:	tar >= 1:1.22
 BuildRequires:	udev-devel
 BuildRequires:	wayland-devel >= 1.11.0
@@ -114,11 +114,11 @@ Dokumentacja do wtyczek GStreamera VA-API.
 %setup -q
 
 %build
-%meson build \
+%meson \
 	--default-library=shared \
 	%{!?with_apidocs:-Ddoc=false}
 
-%ninja_build -C build
+%meson_build
 
 %if %{with apidocs}
 cd build/docs
@@ -128,7 +128,7 @@ LC_ALL=C.UTF-8 hotdoc run --conf-file vaapi-doc.json
 %install
 rm -rf $RPM_BUILD_ROOT
 
-%ninja_install -C build
+%meson_install
 
 %if %{with apidocs}
 install -d $RPM_BUILD_ROOT%{_docdir}/gstreamer-%{gstmver}
