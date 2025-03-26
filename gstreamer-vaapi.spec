@@ -4,18 +4,18 @@
 %bcond_with	api		# GST VA-API libraries API [no longer exported as of 1.6.0]
 
 %define		gstapi		1.6
-%define		gst_ver		1.24.0
-%define		gstpb_ver	1.24.0
-%define		gstpd_ver	1.24.0
+%define		gst_ver		1.26.0
+%define		gstpb_ver	1.26.0
+%define		gstpd_ver	1.26.0
 Summary:	GStreamer plugin to support Video Acceleration API
 Summary(pl.UTF-8):	Wtyczka GStreamera obsługująca Video Acceleration API
 Name:		gstreamer-vaapi
-Version:	1.24.12
+Version:	1.26.0
 Release:	1
 License:	LGPL v2.1+
 Group:		Libraries
 Source0:	https://gstreamer.freedesktop.org/src/gstreamer-vaapi/%{name}-%{version}.tar.xz
-# Source0-md5:	8a285143aff48ca5f015fe422afbed77
+# Source0-md5:	b549a3113f792e94bd1c8308bd074ae1
 URL:		https://gstreamer.freedesktop.org/
 BuildRequires:	EGL-devel
 BuildRequires:	OpenGL-devel
@@ -34,7 +34,7 @@ BuildRequires:	libva-devel >= 1.10.0
 BuildRequires:	libva-drm-devel >= 1.1.0
 BuildRequires:	libva-wayland-devel >= 1.1.0
 BuildRequires:	libva-x11-devel >= 1.0.3
-BuildRequires:	meson >= 1.1
+BuildRequires:	meson >= 1.4
 BuildRequires:	ninja >= 1.5
 BuildRequires:	pkgconfig
 BuildRequires:	pkgconfig(egl)
@@ -116,7 +116,15 @@ Dokumentacja do wtyczek GStreamera VA-API.
 %build
 %meson \
 	--default-library=shared \
-	%{!?with_apidocs:-Ddoc=false}
+	-Ddoc=%{__enabled_disabled apidocs} \
+	-Ddrm=enabled \
+	-Degl=enabled \
+	-Dencoders=enabled \
+	-Dexamples=disabled \
+	-Dglx=enabled \
+	-Dtests=disabled \
+	-Dwayland=enabled \
+	-Dx11=enabled
 
 %meson_build
 
